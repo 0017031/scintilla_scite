@@ -1,0 +1,15 @@
+.*/
+
+*.res
+*.obj
+
+*.dll
+*.exp
+*.lib
+
+*.pdb
+
+*.exe
+
+
+*.7z
