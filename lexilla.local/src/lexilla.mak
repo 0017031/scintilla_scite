@@ -16,7 +16,7 @@ DIR_BIN=..\bin
 LEXILLA=$(DIR_BIN)\lexilla.dll
 LIBLEXILLA=$(DIR_BIN)\liblexilla.lib
 
-LD=link
+LD=link /nologo
 
 !IFDEF SUPPORT_XP
 ADD_DEFINE=-D_USING_V110_SDK71_
@@ -36,11 +36,11 @@ SUBSYSTEM=-SUBSYSTEM:WINDOWS,10.00
 !ENDIF
 
 CRTFLAGS=-D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1 -D_CRT_SECURE_NO_DEPRECATE=1 -D_SCL_SECURE_NO_WARNINGS=1 $(ADD_DEFINE)
-CXXFLAGS=-Zi -TP -MP -W4 -EHsc -std:c++17 $(CRTFLAGS)
+CXXFLAGS=-Zi -TP -MP -W4 -EHsc -std:c++latest $(CRTFLAGS)  $(NOLOGO)
 CXXDEBUG=-Od -MTd -DDEBUG
 CXXNDEBUG=-O1 -MT -DNDEBUG -GL
 NAME=-Fo
-LDFLAGS=-OPT:REF -LTCG -IGNORE:4197 -DEBUG $(SUBSYSTEM) $(CETCOMPAT)
+LDFLAGS=-OPT:REF -LTCG -IGNORE:4197 -DEBUG $(SUBSYSTEM) $(CETCOMPAT)  $(NOLOGO)
 LDDEBUG=
 LIBS=
 NOLOGO=-nologo
@@ -217,7 +217,7 @@ $(LEXILLA): $(LEXILLA_OBJS) LexillaVersion.res
 	$(LD) $(LDFLAGS) -DEF:Lexilla.def -DLL -OUT:$@ $** $(LIBS)
 
 $(LIBLEXILLA): $(LEXILLA_OBJS)
-	LIB -OUT:$@ $**
+	LIB -nologo -OUT:$@ $**
 
 # Define how to build all the objects and what they depend on
 
@@ -229,7 +229,7 @@ $(LIBLEXILLA): $(LEXILLA_OBJS)
 	$(CXX) $(CXXFLAGS) -c $(NAME)$(DIR_O)\ $<
 
 .rc.res:
-	$(RC) -fo$@ $**
+	$(RC) -nologo -fo$@ $**
 
 # Dependencies
 

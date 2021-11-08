@@ -17,7 +17,7 @@ DEBUG_OPTIONS = -Od -MTd -DDEBUG $(STATIC_FLAG)
 DEBUG_OPTIONS=-O1 -MT -DNDEBUG $(STATIC_FLAG) -GL
 !ENDIF
 
-CXXFLAGS = /EHsc /std:c++latest $(DEBUG_OPTIONS) $(INCLUDEDIRS)
+CXXFLAGS = /nologo /EHsc /std:c++latest $(DEBUG_OPTIONS) $(INCLUDEDIRS)
 
 OBJS = TestLexers.obj TestDocument.obj LexillaAccess.obj
 
@@ -27,10 +27,10 @@ test: $(EXE)
 	$(EXE)
 
 clean:
-	$(DEL) *.o *.obj *.exe
+	$(DEL) *.o *.obj *.exe *.exp *.lib
 
 $(EXE): $(OBJS) $(LIBS)
-	$(CXX) $(CXXFLAGS) $(LIBS) /Fe$@ $**
+	$(CXX) $(CXXFLAGS) $(LIBS) /nologo /Fe$@ $**
 
 .cxx.obj::
 	$(CXX) $(CXXFLAGS) -c $<
