@@ -36,7 +36,7 @@ SUBSYSTEM=-SUBSYSTEM:WINDOWS,10.00
 !ENDIF
 
 CRTFLAGS=-D_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1 -D_CRT_SECURE_NO_DEPRECATE=1 -D_SCL_SECURE_NO_WARNINGS=1 $(ADD_DEFINE)
-CXXFLAGS=-Zi -TP -MP -W4 -EHsc -std:c++17 $(CRTFLAGS)
+CXXFLAGS=-Zi -TP -MP -W4 -EHsc -std:c++latest $(CRTFLAGS) -nologo
 CXXDEBUG=-Od -MTd -DDEBUG
 CXXNDEBUG=-O2 -Ob3 -MT -DNDEBUG -GL
 NAME=-Fo
@@ -120,13 +120,13 @@ SHARED_OBJS = \
 	$(DIR_O)\ScintillaDLL.obj
 
 $(DIR_O)\ScintRes.res : ScintRes.rc
-	$(RC) -fo$@ $**
+	$(RC) -nologo -fo$@ $**
 
-$(COMPONENT): $(COMPONENT_OBJS) $(SHARED_OBJS) $(DIR_O)\ScintRes.res
-	$(LD) $(LDFLAGS) -DEF:Scintilla.def -DLL -OUT:$@ $** $(LIBS)
+$(COMPONENT): $(COMPONENT_OBJS) $(DIR_O)\ScintRes.res
+	$(LD) -nologo $(LDFLAGS) -DEF:Scintilla.def -DLL -OUT:$@ $** $(LIBS)
 
 $(LIBSCI): $(COMPONENT_OBJS)
-	LIB /OUT:$@ $**
+	LIB -nologo /OUT:$@ $**
 
 # Define how to build all the objects and what they depend on
 
@@ -144,4 +144,3 @@ $(LIBSCI): $(COMPONENT_OBJS)
 !INCLUDE nmdeps.mak
 
 !ENDIF
-
