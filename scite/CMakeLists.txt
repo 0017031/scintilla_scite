@@ -43,6 +43,7 @@ target_sources(scite PRIVATE
         src/JobQueue.cxx
         src/MatchMarker.cxx
         src/MultiplexExtension.cxx
+        src/PathMatch.cxx
         src/PropSetFile.cxx
         src/ScintillaWindow.cxx
         src/SciTEBase.cxx
