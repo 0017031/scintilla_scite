@@ -1,53 +1,29 @@
-if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-    cmake_minimum_required(VERSION 3.20)
-    project(scintilla LANGUAGES CXX)
-    set(CMAKE_CXX_STANDARD 23)
-endif ()
+cmake_minimum_required(VERSION 3.20)
+set(t scintilla)
 
-add_library(scintilla)
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR) # stand-alone
+    # set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    get_filename_component(lexilla_path "../lexilla" ABSOLUTE)
+    project(${t} CXX)
+    message("project(${t} CXX):   ${CMAKE_SOURCE_DIR}")
+    message("lexilla_path:\t\t${lexilla_path}")
+else() # sub-dir
+    message("${t}    : ${CMAKE_BUILD_TYPE},  ${CMAKE_CURRENT_SOURCE_DIR}")
+    set(SCINTILLA_STATIC_LIBRARY ${t} PARENT_SCOPE)
+endif()
 
-target_include_directories(scintilla PRIVATE src)
-target_include_directories(scintilla PUBLIC include)
-target_link_libraries(scintilla PRIVATE MSImg32 Imm32)
+add_library(${t})
+target_compile_features(${t} PRIVATE cxx_std_17)
+target_include_directories(${t} PRIVATE src)
+target_include_directories(${t} PUBLIC include)
+target_link_libraries(${t} INTERFACE 
+MSImg32 
+Imm32
+)
 
-install(TARGETS scintilla DESTINATION bin)
+file(GLOB_RECURSE cpp_files CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cxx)
+list(FILTER cpp_files EXCLUDE REGEX "examples|test|gtk")
+target_sources(${t} PRIVATE ${cpp_files})
 
-target_sources(scintilla PRIVATE
-        win32/HanjaDic.cxx
-        win32/PlatWin.cxx
-        win32/ScintillaDLL.cxx
-        win32/ScintillaWin.cxx
+install(TARGETS ${t} DESTINATION bin)
 
-
-        src/ScintillaBase.cxx
-        src/AutoComplete.cxx
-        src/CallTip.cxx
-        src/CaseConvert.cxx
-        src/CaseFolder.cxx
-        src/CellBuffer.cxx
-        src/CharacterCategoryMap.cxx
-        src/CharacterType.cxx
-        src/CharClassify.cxx
-        src/ContractionState.cxx
-        src/DBCS.cxx
-        src/Decoration.cxx
-        src/Document.cxx
-        src/EditModel.cxx
-        src/Editor.cxx
-        src/EditView.cxx
-        src/Geometry.cxx
-        src/Indicator.cxx
-        src/KeyMap.cxx
-        src/LineMarker.cxx
-        src/MarginView.cxx
-        src/PerLine.cxx
-        src/PositionCache.cxx
-        src/RESearch.cxx
-        src/RunStyles.cxx
-        src/Selection.cxx
-        src/Style.cxx
-        src/UniConversion.cxx
-        src/UniqueString.cxx
-        src/ViewStyle.cxx
-        src/XPM.cxx
-        )

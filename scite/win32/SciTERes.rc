@@ -8,7 +8,9 @@
 
 SciTE ICON SciBall.ico
 
+#ifndef CMAKE_BUILD
 1 RT_MANIFEST SciTE.exe.manifest
+#endif
 
 SciTE MENU
 BEGIN
