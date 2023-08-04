@@ -37,7 +37,9 @@ public:
 
 typedef std::map<FontSpecification, std::unique_ptr<FontRealised>> FontMap;
 
-inline std::optional<ColourRGBA> OptionalColour(Scintilla::uptr_t wParam, Scintilla::sptr_t lParam) {
+using ColourOptional = std::optional<ColourRGBA>;
+
+inline ColourOptional OptionalColour(Scintilla::uptr_t wParam, Scintilla::sptr_t lParam) noexcept {
 	if (wParam) {
 		return ColourRGBA::FromIpRGB(lParam);
 	} else {
@@ -46,41 +48,43 @@ inline std::optional<ColourRGBA> OptionalColour(Scintilla::uptr_t wParam, Scinti
 }
 
 struct SelectionAppearance {
+	// Is the selection visible?
+	bool visible = true;
 	// Whether to draw on base layer or over text
-	Scintilla::Layer layer;
+	Scintilla::Layer layer = Layer::Base;
 	// Draw selection past line end characters up to right border
-	bool eolFilled;
+	bool eolFilled = false;
 };
 
 struct CaretLineAppearance {
 	// Whether to draw on base layer or over text
-	Scintilla::Layer layer;
+	Scintilla::Layer layer = Layer::Base;
 	// Also show when non-focused
-	bool alwaysShow;
+	bool alwaysShow = false;
 	// highlight sub line instead of whole line
-	bool subLine;
+	bool subLine = false;
 	// Non-0: draw a rectangle around line instead of filling line. Value is pixel width of frame
-	int frame;
+	int frame = 0;
 };
 
 struct CaretAppearance {
 	// Line, block, over-strike bar ...
-	Scintilla::CaretStyle style;
+	Scintilla::CaretStyle style = CaretStyle::Line;
 	// Width in pixels
-	int width;
+	int width = 1;
 };
 
 struct WrapAppearance {
 	// No wrapping, word, character, whitespace appearance
-	Scintilla::Wrap state;
+	Scintilla::Wrap state = Wrap::None;
 	// Show indication of wrap at line end, line start, or in margin
-	Scintilla::WrapVisualFlag visualFlags;
+	Scintilla::WrapVisualFlag visualFlags = WrapVisualFlag::None;
 	// Show indication near margin or near text
-	Scintilla::WrapVisualLocation visualFlagsLocation;
+	Scintilla::WrapVisualLocation visualFlagsLocation = WrapVisualLocation::Default;
 	// How much indentation to show wrapping
-	int visualStartIndent;
-	// WrapIndentMode::Fixed, _SAME, _INDENT, _DEEPINDENT
-	Scintilla::WrapIndentMode indentMode;
+	int visualStartIndent = 0;
+	// WrapIndentMode::Fixed, Same, Indent, DeepIndent
+	Scintilla::WrapIndentMode indentMode = WrapIndentMode::Fixed;
 };
 
 struct EdgeProperties {
@@ -131,16 +135,17 @@ public:
 	XYPOSITION controlCharWidth;
 	ColourRGBA selbar;
 	ColourRGBA selbarlight;
-	std::optional<ColourRGBA> foldmarginColour;
-	std::optional<ColourRGBA> foldmarginHighlightColour;
+	ColourOptional foldmarginColour;
+	ColourOptional foldmarginHighlightColour;
 	bool hotspotUnderline;
 	/// Margins are ordered: Line Numbers, Selection Margin, Spacing Margin
 	int leftMarginWidth;	///< Spacing margin on left of text
 	int rightMarginWidth;	///< Spacing margin on right of text
-	int maskInLine;	///< Mask for markers to be put into text because there is nowhere for them to go in margin
-	int maskDrawInText;	///< Mask for markers that always draw in text
+	int maskInLine = 0;	///< Mask for markers to be put into text because there is nowhere for them to go in margin
+	int maskDrawInText = 0;	///< Mask for markers that always draw in text
+	int maskDrawWrapped = 0;	///< Mask for markers that draw on wrapped lines
 	std::vector<MarginStyle> ms;
-	int fixedColumnWidth;	///< Total width of margins
+	int fixedColumnWidth = 0;	///< Total width of margins
 	bool marginInside;	///< true: margin included in text view, false: separate views
 	int textStart;	///< Starting x position of text within the view
 	int zoomLevel;
@@ -175,7 +180,7 @@ public:
 	int ctrlCharPadding; // the padding around control character text blobs
 	int lastSegItalicsOffset; // the offset so as not to clip italic characters at EOLs
 
-	using ElementMap = std::map<Scintilla::Element, std::optional<ColourRGBA>>;
+	using ElementMap = std::map<Scintilla::Element, ColourOptional>;
 	ElementMap elementColours;
 	ElementMap elementBaseColours;
 	std::set<Scintilla::Element> elementAllowsTranslucent;
@@ -207,7 +212,7 @@ public:
 	void CalcLargestMarkerHeight() noexcept;
 	int GetFrameWidth() const noexcept;
 	bool IsLineFrameOpaque(bool caretActive, bool lineContainsCaret) const;
-	std::optional<ColourRGBA> Background(int marksOfLine, bool caretActive, bool lineContainsCaret) const;
+	ColourOptional Background(int marksOfLine, bool caretActive, bool lineContainsCaret) const;
 	bool SelectionBackgroundDrawn() const noexcept;
 	bool SelectionTextDrawn() const;
 	bool WhitespaceBackgroundDrawn() const;
@@ -215,7 +220,8 @@ public:
 
 	void AddMultiEdge(int column, ColourRGBA colour);
 
-	std::optional<ColourRGBA> ElementColour(Scintilla::Element element) const;
+	ColourOptional ElementColour(Scintilla::Element element) const;
+	ColourRGBA ElementColourForced(Scintilla::Element element) const;
 	bool ElementAllowsTranslucent(Scintilla::Element element) const;
 	bool ResetElement(Scintilla::Element element);
 	bool SetElementColour(Scintilla::Element element, ColourRGBA colour);
@@ -235,9 +241,9 @@ public:
 
 	enum class CaretShape { invisible, line, block, bar };
 	bool IsBlockCaretStyle() const noexcept;
-	bool IsCaretVisible() const noexcept;
+	bool IsCaretVisible(bool isMainSelection) const noexcept;
 	bool DrawCaretInsideSelection(bool inOverstrike, bool imeCaretBlockOverride) const noexcept;
-	CaretShape CaretShapeForMode(bool inOverstrike) const noexcept;
+	CaretShape CaretShapeForMode(bool inOverstrike, bool isMainSelection) const noexcept;
 
 private:
 	void AllocStyles(size_t sizeNew);

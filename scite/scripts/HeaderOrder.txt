@@ -30,6 +30,7 @@
 
 // C++ standard library
 #include <stdexcept>
+#include <system_error>
 #include <tuple>
 #include <string>
 #include <string_view>
@@ -57,6 +58,7 @@
 
 #include <unistd.h>
 #include <dirent.h>
+#include <pwd.h>
 
 // Also on Windows
 #include <sys/types.h>
@@ -94,6 +96,7 @@
 #include "ScintillaTypes.h"
 #include "ScintillaMessages.h"
 #include "ScintillaCall.h"
+#include "ScintillaStructures.h"
 #include "Scintilla.h"
 #include "ScintillaWidget.h"
 
@@ -108,6 +111,7 @@
 #include "StringList.h"
 #include "StringHelpers.h"
 #include "FilePath.h"
+#include "PathMatch.h"
 #include "StyleDefinition.h"
 #include "PropSetFile.h"
 #include "StyleWriter.h"

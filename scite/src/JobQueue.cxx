@@ -51,14 +51,14 @@ JobSubsystem SubsystemFromChar(char c) noexcept {
 	return JobSubsystem::cli;
 }
 
-JobMode::JobMode(PropSetFile &props, int item, const char *fileNameExt) : jobType(JobSubsystem::cli), saveBefore(0), isFilter(false), flags(0) {
+JobMode::JobMode(const PropSetFile &props, int item, std::string_view fileNameExt) : jobType(JobSubsystem::cli), saveBefore(0), isFilter(false), flags(0) {
 	bool quiet = false;
 	int repSel = 0;
 	bool groupUndo = false;
 
 	const std::string itemSuffix = StdStringFromInteger(item) + ".";
 	std::string propName = std::string("command.mode.") + itemSuffix;
-	std::string modeVal(props.GetNewExpandString(propName.c_str(), fileNameExt));
+	std::string modeVal(props.GetNewExpandString(propName, fileNameExt));
 
 	modeVal.erase(std::remove(modeVal.begin(), modeVal.end(), ' '), modeVal.end());
 	std::vector<std::string> modes = StringSplit(modeVal, ',');
@@ -138,39 +138,37 @@ JobMode::JobMode(PropSetFile &props, int item, const char *fileNameExt) : jobTyp
 
 	propName = "command.save.before.";
 	propName += itemSuffix;
-	if (props.GetWild(propName.c_str(), fileNameExt).length())
-		saveBefore = atoi(props.GetNewExpandString(propName.c_str(), fileNameExt).c_str());
+	saveBefore = IntegerFromString(props.GetNewExpandString(propName, fileNameExt), saveBefore);
 
 	propName = "command.is.filter.";
 	propName += itemSuffix;
-	if (props.GetWild(propName.c_str(), fileNameExt).length())
-		isFilter = (props.GetNewExpandString(propName.c_str(), fileNameExt) == "1");
+	if (props.GetWild(propName, fileNameExt).length())
+		isFilter = (props.GetNewExpandString(propName, fileNameExt) == "1");
 
 	propName = "command.subsystem.";
 	propName += itemSuffix;
-	if (props.GetWild(propName.c_str(), fileNameExt).length()) {
-		std::string subsystemVal = props.GetNewExpandString(propName.c_str(), fileNameExt);
+	if (props.GetWild(propName, fileNameExt).length()) {
+		std::string subsystemVal = props.GetNewExpandString(propName, fileNameExt);
 		jobType = SubsystemFromChar(subsystemVal[0]);
 	}
 
 	propName = "command.input.";
 	propName += itemSuffix;
-	if (props.GetWild(propName.c_str(), fileNameExt).length()) {
-		input = props.GetNewExpandString(propName.c_str(), fileNameExt);
+	if (props.GetWild(propName, fileNameExt).length()) {
+		input = props.GetNewExpandString(propName, fileNameExt);
 		flags |= jobHasInput;
 	}
 
 	propName = "command.quiet.";
 	propName += itemSuffix;
-	if (props.GetWild(propName.c_str(), fileNameExt).length())
-		quiet = props.GetNewExpandString(propName.c_str(), fileNameExt) == "1";
+	if (props.GetWild(propName, fileNameExt).length())
+		quiet = props.GetNewExpandString(propName, fileNameExt) == "1";
 	if (quiet)
 		flags |= jobQuiet;
 
 	propName = "command.replace.selection.";
 	propName += itemSuffix;
-	if (props.GetWild(propName.c_str(), fileNameExt).length())
-		repSel = atoi(props.GetNewExpandString(propName.c_str(), fileNameExt).c_str());
+	repSel = IntegerFromString(props.GetNewExpandString(propName, fileNameExt), repSel);
 
 	if (repSel == 1)
 		flags |= jobRepSelYes;
@@ -185,7 +183,7 @@ Job::Job() noexcept : jobType(JobSubsystem::cli), flags(0) {
 	Clear();
 }
 
-Job::Job(const std::string &command_, const FilePath &directory_, JobSubsystem jobType_, const std::string &input_, int flags_)
+Job::Job(std::string_view command_, const FilePath &directory_, JobSubsystem jobType_, std::string_view input_, int flags_)
 	: command(command_), directory(directory_), jobType(jobType_), input(input_), flags(flags_) {
 }
 
@@ -254,7 +252,7 @@ void JobQueue::ClearJobs() noexcept {
 	commandCurrent = 0;
 }
 
-void JobQueue::AddCommand(const std::string &command, const FilePath &directory, JobSubsystem jobType, const std::string &input, int flags) {
+void JobQueue::AddCommand(std::string_view command, const FilePath &directory, JobSubsystem jobType, std::string_view input, int flags) {
 	if ((commandCurrent < commandMax) && (command.length())) {
 		if (commandCurrent == 0)
 			jobUsesOutputPane = false;

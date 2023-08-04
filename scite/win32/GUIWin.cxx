@@ -15,12 +15,8 @@
 #include <chrono>
 #include <sstream>
 
-#ifdef __MINGW_H
-#define _WIN32_IE	0x0400
-#endif
-
 #undef _WIN32_WINNT
-#define _WIN32_WINNT  0x0602
+#define _WIN32_WINNT  0x0A00
 #include <windows.h>
 
 #include "ScintillaTypes.h"
@@ -158,14 +154,25 @@ gui_string StringFromUTF8(const std::string &s) {
 	return us;
 }
 
-std::string UTF8FromString(const gui_string &s) {
-	if (s.empty()) {
+gui_string StringFromUTF8(std::string_view sv) {
+	if (sv.empty()) {
+		return gui_string();
+	}
+	const size_t sLen = sv.length();
+	const size_t wideLen = UTF16Length(sv.data(), sLen);
+	gui_string us(wideLen, 0);
+	UTF16FromUTF8(sv.data(), sLen, us.data(), wideLen);
+	return us;
+}
+
+std::string UTF8FromString(gui_string_view sv) {
+	if (sv.empty()) {
 		return std::string();
 	}
-	const size_t sLen = s.size();
-	const size_t narrowLen = UTF8Length(s.c_str(), sLen);
+	const size_t sLen = sv.size();
+	const size_t narrowLen = UTF8Length(sv.data(), sLen);
 	std::string us(narrowLen, 0);
-	UTF8FromUTF16(s.c_str(), sLen, us.data());
+	UTF8FromUTF16(sv.data(), sLen, us.data());
 	return us;
 }
 
@@ -179,7 +186,7 @@ gui_string StringFromLongLong(long long i) {
 
 gui_string HexStringFromInteger(long i) {
 	char number[32];
-	sprintf(number, "%0lx", i);
+	snprintf(number, std::size(number), "%0lx", i);
 	gui_char gnumber[32] {};
 	size_t n = 0;
 	while (number[n]) {
@@ -208,7 +215,7 @@ void Window::Destroy() {
 	wid = {};
 }
 
-bool Window::HasFocus() {
+bool Window::HasFocus() const noexcept {
 	return ::GetFocus() == wid;
 }
 

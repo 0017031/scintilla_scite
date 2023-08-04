@@ -94,23 +94,23 @@ short PDFfontAscenders[] =  { 629, 718, 699 };
 short PDFfontDescenders[] = { 157, 207, 217 };
 short PDFfontWidths[] =     { 600,   0,   0 };
 
-}
-
-inline std::string getPDFRGB(const char *stylecolour) {
+std::string getPDFRGB(std::string_view stylecolour) {
 	std::string ret;
 	// grab colour components (max string length produced = 18)
 	for (int i = 1; i < 6; i += 2) {
 		char val[20] = "";
 		// 3 decimal places for enough dynamic range
-		const int c = (IntFromHexByte(stylecolour + i) * 1000 + 127) / 255;
+		const int c = (IntFromHexByte(stylecolour.substr(i,2)) * 1000 + 127) / 255;
 		if (c == 0 || c == 1000) {	// optimise
-			sprintf(val, "%d ", c / 1000);
+			snprintf(val, std::size(val), "%d ", c / 1000);
 		} else {
-			sprintf(val, "0.%03d ", c);
+			snprintf(val, std::size(val), "0.%03d ", c);
 		}
 		ret += val;
 	}
 	return ret;
+}
+
 }
 
 void SciTEBase::SaveToPDF(const FilePath &saveName) {
@@ -123,9 +123,7 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 		std::vector<long> offsetList;
 	public:
 		int index;
-		explicit PDFObjectTracker(FILE *fp_) {
-			fp = fp_;
-			index = 1;
+		explicit PDFObjectTracker(FILE *fp_) noexcept : fp(fp_), index(1) {
 		}
 
 		// Deleted so PDFObjectTracker objects can not be copied.
@@ -134,18 +132,17 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 		PDFObjectTracker &operator=(const PDFObjectTracker &) = delete;
 		PDFObjectTracker &operator=(PDFObjectTracker &&) = delete;
 
-		void write(const char *objectData) {
-			const size_t length = strlen(objectData);
+		void write(std::string_view objectData) noexcept {
 			// note binary write used, open with "wb"
-			fwrite(objectData, sizeof(char), length, fp);
+			fwrite(objectData.data(), sizeof(char), objectData.size(), fp);
 		}
-		void write(int objectData) {
+		void write(int objectData) noexcept {
 			char val[20];
-			sprintf(val, "%d", objectData);
+			snprintf(val, std::size(val), "%d", objectData);
 			write(val);
 		}
 		// returns object number assigned to the supplied data
-		int add(const char *objectData) {
+		int add(std::string_view objectData) {
 			// save offset, then format and write object
 			offsetList.push_back(ftell(fp));
 			write(index);
@@ -155,7 +152,7 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 			return index++;
 		}
 		// builds xref table, returns file offset of xref table
-		long xref() {
+		long xref() noexcept {
 			char val[32] = "";
 			// xref start index and number of entries
 			const long xrefStart = ftell(fp);
@@ -165,7 +162,7 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 			// so extra space added; also the first entry is special
 			write("\n0000000000 65535 f \n");
 			for (int i = 0; i < index - 1; i++) {
-				sprintf(val, "%010ld 00000 n \n", offsetList[i]);
+				snprintf(val, std::size(val), "%010ld 00000 n \n", offsetList[i]);
 				write(val);
 			}
 			return xrefStart;
@@ -221,7 +218,7 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 		PDFRender &operator=(const PDFRender &) = delete;
 		PDFRender &operator=(PDFRender &&) = delete;
 		//
-		double fontToPoints(int thousandths) const {
+		double fontToPoints(int thousandths) const noexcept {
 			return (double)fontSize * thousandths / 1000.0;
 		}
 		std::string setStyle(int style_) {
@@ -232,7 +229,7 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 				if (style[styleCurrent].font != style[styleNext].font
 						|| style_ == -1) {
 					char fontSpec[100];
-					sprintf(fontSpec, "/F%d %d Tf ",
+					snprintf(fontSpec, std::size(fontSpec), "/F%d %d Tf ",
 						style[styleNext].font + 1, fontSize);
 					buff += fontSpec;
 				}
@@ -269,7 +266,7 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 			// *expected* to start from index 1 since they are the first objects
 			// to be inserted (PDF1.4Ref(p317))
 			for (int i = 0; i < 4; i++) {
-				sprintf(buffer, "<</Type/Font/Subtype/Type1"
+				snprintf(buffer, std::size(buffer), "<</Type/Font/Subtype/Type1"
 					"/Name/F%d/BaseFont/%s/Encoding/"
 					PDF_ENCODING
 					">>\n", i + 1,
@@ -292,7 +289,7 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 			const int pageObjectStart = oT->index;
 			const int pagesRef = pageObjectStart + pageCount;
 			for (int i = 0; i < pageCount; i++) {
-				sprintf(buffer, "<</Type/Page/Parent %d 0 R\n"
+				snprintf(buffer, std::size(buffer), "<</Type/Page/Parent %d 0 R\n"
 					"/MediaBox[ 0 0 %ld %ld"
 					"]\n/Contents %d 0 R\n"
 					"/Resources %d 0 R\n>>\n",
@@ -303,19 +300,19 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 			// create page tree object (PDF1.4Ref(p86))
 			pageData = "<</Type/Pages/Kids[\n";
 			for (int j = 0; j < pageCount; j++) {
-				sprintf(buffer, "%d 0 R\n", pageObjectStart + j);
+				snprintf(buffer, std::size(buffer), "%d 0 R\n", pageObjectStart + j);
 				pageData += buffer;
 			}
-			sprintf(buffer, "]/Count %d\n>>\n", pageCount);
+			snprintf(buffer, std::size(buffer), "]/Count %d\n>>\n", pageCount);
 			pageData += buffer;
-			oT->add(pageData.c_str());
+			oT->add(pageData);
 			// create catalog object (PDF1.4Ref(p83))
-			sprintf(buffer, "<</Type/Catalog/Pages %d 0 R >>\n", pagesRef);
+			snprintf(buffer, std::size(buffer), "<</Type/Catalog/Pages %d 0 R >>\n", pagesRef);
 			const int catalogRef = oT->add(buffer);
 			// append the cross reference table (PDF1.4Ref(p64))
 			const long xref = oT->xref();
 			// end the file with the trailer (PDF1.4Ref(p67))
-			sprintf(buffer, "trailer\n<< /Size %d /Root %d 0 R\n>>"
+			snprintf(buffer, std::size(buffer), "trailer\n<< /Size %d /Root %d 0 R\n>>"
 				"\nstartxref\n%ld\n%%%%EOF\n",
 				oT->index, catalogRef, xref);
 			oT->write(buffer);
@@ -369,7 +366,7 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 			const double fontAscender = fontToPoints(PDFfontAscenders[fontSet]);
 			yPos = pageHeight - pageMargin.top - fontAscender;
 			// start a new page
-			sprintf(buffer, "BT 1 0 0 1 %d %d Tm\n",
+			snprintf(buffer, std::size(buffer), "BT 1 0 0 1 %d %d Tm\n",
 				pageMargin.left, (int)yPos);
 			pageData = buffer;
 			// force setting of initial font, colour
@@ -391,10 +388,10 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 						<< "<</Length "
 						<< (pageData.length() - 1 + 3)
 						<< ">>\nstream\n"
-						<< pageData.c_str()
+						<< pageData
 						<< "ET\nendstream\n";
 				const std::string textObj = osTextObj.str();
-				oT->add(textObj.c_str());
+				oT->add(textObj);
 			} catch (std::exception &) {
 				// Exceptions not enabled on stream but still causes diagnostic in Coverity.
 				// Simply swallow the failure.
@@ -417,10 +414,10 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 			if (firstLine) {
 				// avoid breakage due to locale setting
 				const int f = static_cast<int>(leading * 10 + 0.5);
-				sprintf(buffer, "0 -%d.%d TD\n", f / 10, f % 10);
+				snprintf(buffer, std::size(buffer), "0 -%d.%d TD\n", f / 10, f % 10);
 				firstLine = false;
 			} else {
-				sprintf(buffer, "T*\n");
+				snprintf(buffer, std::size(buffer), "T*\n");
 			}
 			pageData += buffer;
 		}
@@ -448,34 +445,29 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 			pr.fontSet = 2;
 	}
 	// page size: width, height
-	propItem = props.GetExpandedString("export.pdf.pagesize");
-	char buffer[200] = "";
-	const char *ps = propItem.c_str();
-	const char *next = GetNextPropItem(ps, buffer, 32);
-	if (0 >= (pr.pageWidth = atol(buffer))) {
+	std::vector<std::string> pageSize = StringSplit(
+		props.GetExpandedString("export.pdf.pagesize"), ',');
+	pageSize.resize(2); // Ensure indexing won't fail
+	if (0 >= (pr.pageWidth = IntegerFromString(pageSize[0], 0))) {
 		pr.pageWidth = PDF_WIDTH_DEFAULT;
 	}
-	GetNextPropItem(next, buffer, 32);
-	if (0 >= (pr.pageHeight = atol(buffer))) {
+	if (0 >= (pr.pageHeight = IntegerFromString(pageSize[1], 0))) {
 		pr.pageHeight = PDF_HEIGHT_DEFAULT;
 	}
 	// page margins: left, right, top, bottom
-	propItem = props.GetExpandedString("export.pdf.margins");
-	ps = propItem.c_str();
-	next = GetNextPropItem(ps, buffer, 32);
-	if (0 >= (pr.pageMargin.left = static_cast<int>(atol(buffer)))) {
+	std::vector<std::string> pageMargins = StringSplit(
+		props.GetExpandedString("export.pdf.margins"), ',');
+	pageMargins.resize(4); // Ensure indexing won't fail
+	if (0 >= (pr.pageMargin.left = IntegerFromString(pageMargins[0], 0))) {
 		pr.pageMargin.left = PDF_MARGIN_DEFAULT;
 	}
-	next = GetNextPropItem(next, buffer, 32);
-	if (0 >= (pr.pageMargin.right = static_cast<int>(atol(buffer)))) {
+	if (0 >= (pr.pageMargin.right = IntegerFromString(pageMargins[1], 0))) {
 		pr.pageMargin.right = PDF_MARGIN_DEFAULT;
 	}
-	next = GetNextPropItem(next, buffer, 32);
-	if (0 >= (pr.pageMargin.top = static_cast<int>(atol(buffer)))) {
+	if (0 >= (pr.pageMargin.top = IntegerFromString(pageMargins[2], 0))) {
 		pr.pageMargin.top = PDF_MARGIN_DEFAULT;
 	}
-	GetNextPropItem(next, buffer, 32);
-	if (0 >= (pr.pageMargin.bottom = static_cast<int>(atol(buffer)))) {
+	if (0 >= (pr.pageMargin.bottom = IntegerFromString(pageMargins[3], 0))) {
 		pr.pageMargin.bottom = PDF_MARGIN_DEFAULT;
 	}
 
@@ -492,7 +484,7 @@ void SciTEBase::SaveToPDF(const FilePath &saveName) {
 			if (sd.italics) { pr.style[i].font |= 2; }
 			if (sd.IsBold()) { pr.style[i].font |= 1; }
 			if (sd.fore.length()) {
-				pr.style[i].fore = getPDFRGB(sd.fore.c_str());
+				pr.style[i].fore = getPDFRGB(sd.fore);
 			} else if (i == StyleDefault) {
 				pr.style[i].fore = "0 0 0 ";
 			}

@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <climits>
 
 #include <stdexcept>
 #include <string_view>
@@ -92,9 +93,6 @@ XPM::XPM(const char *const *linesForm) {
 	Init(linesForm);
 }
 
-XPM::~XPM() {
-}
-
 void XPM::Init(const char *textForm) {
 	// Test done is two parts to avoid possibility of overstepping the memory
 	// if memcmp implemented strangely. Must be 4 bytes at least at destination.
@@ -102,7 +100,7 @@ void XPM::Init(const char *textForm) {
 		// Build the lines form out of the text form
 		std::vector<const char *> linesForm = LinesFormFromTextForm(textForm);
 		if (!linesForm.empty()) {
-			Init(&linesForm[0]);
+			Init(linesForm.data());
 		}
 	} else {
 		// It is really in line form
@@ -146,7 +144,7 @@ void XPM::Init(const char *const *linesForm) {
 		colourCodeTable[static_cast<unsigned char>(code)] = colour;
 	}
 
-	for (int y=0; y<height; y++) {
+	for (ptrdiff_t y=0; y<height; y++) {
 		const char *lform = linesForm[y+nColours+1];
 		const size_t len = MeasureLength(lform);
 		for (size_t x = 0; x<len; x++)
@@ -241,7 +239,12 @@ RGBAImage::RGBAImage(const XPM &xpm) {
 	}
 }
 
-RGBAImage::~RGBAImage() {
+float RGBAImage::GetScaledHeight() const noexcept {
+	return static_cast<float>(height) / scale;
+}
+
+float RGBAImage::GetScaledWidth() const noexcept {
+	return static_cast<float>(width) / scale;
 }
 
 int RGBAImage::CountBytes() const noexcept {
@@ -249,16 +252,24 @@ int RGBAImage::CountBytes() const noexcept {
 }
 
 const unsigned char *RGBAImage::Pixels() const noexcept {
-	return &pixelBytes[0];
+	return pixelBytes.data();
 }
 
 void RGBAImage::SetPixel(int x, int y, ColourRGBA colour) noexcept {
-	unsigned char *pixel = &pixelBytes[0] + (y * width + x) * 4;
+	unsigned char *pixel = pixelBytes.data() + (y * width + x) * 4;
 	// RGBA
 	pixel[0] = colour.GetRed();
 	pixel[1] = colour.GetGreen();
 	pixel[2] = colour.GetBlue();
 	pixel[3] = colour.GetAlpha();
+}
+
+namespace {
+
+constexpr unsigned char AlphaMultiplied(unsigned char value, unsigned char alpha) noexcept {
+	return (value * alpha / UCHAR_MAX) & 0xffU;
+}
+
 }
 
 // Transform a block of pixels from RGBA to BGRA with premultiplied alpha.
@@ -267,9 +278,9 @@ void RGBAImage::BGRAFromRGBA(unsigned char *pixelsBGRA, const unsigned char *pix
 	for (size_t i = 0; i < count; i++) {
 		const unsigned char alpha = pixelsRGBA[3];
 		// Input is RGBA, output is BGRA with premultiplied alpha
-		pixelsBGRA[2] = pixelsRGBA[0] * alpha / 255;
-		pixelsBGRA[1] = pixelsRGBA[1] * alpha / 255;
-		pixelsBGRA[0] = pixelsRGBA[2] * alpha / 255;
+		pixelsBGRA[2] = AlphaMultiplied(pixelsRGBA[0], alpha);
+		pixelsBGRA[1] = AlphaMultiplied(pixelsRGBA[1], alpha);
+		pixelsBGRA[0] = AlphaMultiplied(pixelsRGBA[2], alpha);
 		pixelsBGRA[3] = alpha;
 		pixelsRGBA += bytesPerPixel;
 		pixelsBGRA += bytesPerPixel;
@@ -277,10 +288,6 @@ void RGBAImage::BGRAFromRGBA(unsigned char *pixelsBGRA, const unsigned char *pix
 }
 
 RGBAImageSet::RGBAImageSet() : height(-1), width(-1) {
-}
-
-RGBAImageSet::~RGBAImageSet() {
-	Clear();
 }
 
 /// Remove all images.
@@ -307,7 +314,7 @@ RGBAImage *RGBAImageSet::Get(int ident) {
 }
 
 /// Give the largest height of the set.
-int RGBAImageSet::GetHeight() const {
+int RGBAImageSet::GetHeight() const noexcept {
 	if (height < 0) {
 		for (const std::pair<const int, std::unique_ptr<RGBAImage>> &image : images) {
 			if (height < image.second->GetHeight()) {
@@ -319,7 +326,7 @@ int RGBAImageSet::GetHeight() const {
 }
 
 /// Give the largest width of the set.
-int RGBAImageSet::GetWidth() const {
+int RGBAImageSet::GetWidth() const noexcept {
 	if (width < 0) {
 		for (const std::pair<const int, std::unique_ptr<RGBAImage>> &image : images) {
 			if (width < image.second->GetWidth()) {

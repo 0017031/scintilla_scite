@@ -33,9 +33,12 @@ class ScintillaGTK : public ScintillaBase {
 	int verticalScrollBarWidth;
 	int horizontalScrollBarHeight;
 
-	SelectionText primary;
+	PRectangle rectangleClient;
 
-	GdkEvent *evbtn;
+	SelectionText primary;
+	SelectionPosition posPrimary;
+
+	UniqueGdkEvent evbtn;
 	guint buttonMouse;
 	bool capturedMouse;
 	bool dragWasDropped;
@@ -59,7 +62,7 @@ class ScintillaGTK : public ScintillaBase {
 	bool preeditInitialized;
 	Window wPreedit;
 	Window wPreeditDraw;
-	GtkIMContext *im_context;
+	UniqueIMContext im_context;
 	GUnicodeScript lastNonCommonScript;
 
 	GtkSettings *settings;
@@ -81,6 +84,7 @@ class ScintillaGTK : public ScintillaBase {
 	bool repaintFullWindow;
 
 	guint styleIdleID;
+	guint scrollBarIdleID = 0;
 	FontOptions fontOptionsPrevious;
 	int accessibilityEnabled;
 	AtkObject *accessible;
@@ -92,7 +96,7 @@ public:
 	ScintillaGTK(ScintillaGTK &&) = delete;
 	ScintillaGTK &operator=(const ScintillaGTK &) = delete;
 	ScintillaGTK &operator=(ScintillaGTK &&) = delete;
-	virtual ~ScintillaGTK();
+	~ScintillaGTK() override;
 	static ScintillaGTK *FromWidget(GtkWidget *widget) noexcept;
 	static void ClassInit(OBJECT_CLASS *object_class, GtkWidgetClass *widget_class, GtkContainerClass *container_class);
 private:
@@ -126,12 +130,14 @@ private:
 	bool HaveMouseCapture() override;
 	bool PaintContains(PRectangle rc) override;
 	void FullPaint();
+	void SetClientRectangle();
 	PRectangle GetClientRectangle() const override;
 	void ScrollText(Sci::Line linesToMove) override;
 	void SetVerticalScrollPos() override;
 	void SetHorizontalScrollPos() override;
 	bool ModifyScrollBars(Sci::Line nMax, Sci::Line nPage) override;
 	void ReconfigureScrollBars() override;
+	void SetScrollBars() override;
 	void NotifyChange() override;
 	void NotifyFocus(bool focus) override;
 	void NotifyParent(Scintilla::NotificationData scn) override;
@@ -232,6 +238,11 @@ private:
 	void PreeditChangedInlineThis();
 	void PreeditChangedWindowedThis();
 	static void PreeditChanged(GtkIMContext *context, ScintillaGTK *sciThis);
+	bool RetrieveSurroundingThis(GtkIMContext *context);
+	static gboolean RetrieveSurrounding(GtkIMContext *context, ScintillaGTK *sciThis);
+	bool DeleteSurroundingThis(GtkIMContext *context, gint characterOffset, gint characterCount);
+	static gboolean DeleteSurrounding(GtkIMContext *context, gint characterOffset, gint characterCount,
+					  ScintillaGTK *sciThis);
 	void MoveImeCarets(Sci::Position pos);
 	void DrawImeIndicator(int indicator, Sci::Position len);
 	void SetCandidateWindowPos();

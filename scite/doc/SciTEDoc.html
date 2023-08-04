@@ -440,7 +440,7 @@ NameError: name 'mistake' is not defined
         <li>MMIXAL</li>
         <li>MSSQL</li>
         <li>Modula 3</li>
-        <li>Nimrod</li>
+        <li>Nim</li>
         <li>nnCron</li>
         <li>NSIS*</li>
         <li>Objective C</li>
@@ -874,13 +874,16 @@ NameError: name 'mistake' is not defined
                <tr id='property-FileName'><td>FileName</td><td>base name of the current file</td></tr>
                <tr id='property-FileExt'><td>FileExt</td><td>extension of the current file</td></tr>
                <tr id='property-FileNameExt'><td>FileNameExt</td><td>$(FileName).$(FileExt)</td></tr>
+               <tr id='property-RelativePath'><td>RelativePath</td><td>relative path from properties file to current file</td></tr>
                <tr id='property-Language'><td>Language</td><td>name of the lexer used for the current file</td></tr>
                <tr id='property-SessionPath'><td>SessionPath</td><td>full path of the current session</td></tr>
                <tr id='property-CurrentSelection'><td>CurrentSelection</td><td>value of the currently selected text</td></tr>
                <tr id='property-CurrentWord'><td>CurrentWord</td><td>value of word which the caret is within or near</td></tr>
                <tr id='property-Replacements'><td>Replacements</td><td>number of replacements made by last Replace command</td></tr>
+               <tr id='property-SelectionStart'><td>SelectionStart</td><td>0-based byte position where selection starts</td></tr>
                <tr id='property-SelectionStartColumn'><td>SelectionStartColumn</td><td>column where selection starts</td></tr>
                <tr id='property-SelectionStartLine'><td>SelectionStartLine</td><td>line where selection starts</td></tr>
+               <tr id='property-SelectionEnd'><td>SelectionEnd</td><td>0-based byte position where selection ends</td></tr>
                <tr id='property-SelectionEndColumn'><td>SelectionEndColumn</td><td>column where selection ends</td></tr>
                <tr id='property-SelectionEndLine'><td>SelectionEndLine</td><td>line where selection ends</td></tr>
                <tr id='property-CurrentMessage'><td>CurrentMessage</td><td>most recently selected output pane message</td></tr>
@@ -964,14 +967,35 @@ NameError: name 'mistake' is not defined
       non-indented statement is found the if clause is finished. Only simple set
       statements are allowed in if clauses. The evaluation of if statements occurs
       at read time, not at evaluation time.
-      A reread is forced if either of the system properties changes.
+      A reread is forced if either of the system properties changes.</p>
      <div class="example">
      if PLAT_WIN<br />
      &nbsp;&nbsp;&nbsp;&nbsp;caret.fore=#00FF00<br />
      if $(= $(Appearance);1)<br />
      &nbsp;&nbsp;&nbsp;&nbsp;caret.fore=#FFFFFF<br />
      </div>
-    </p>
+    <p>
+      Local and directories properties files may test the value of the current file in "if" tests with
+      $(FilePath), $(FileDir), $(FileName), $(FileExt), $(FileNameExt), and $(RelativePath).</p>
+     <div class="example">
+     if $(= $(FileNameExt);HeaderEOLFill_0.md)<br />
+     &nbsp;&nbsp;&nbsp;&nbsp;lexer.markdown.header.eolfill=0<br />
+     if $(= $(FileExt);pl)<br />
+     &nbsp;&nbsp;&nbsp;&nbsp;edge.mode=1<br />
+     &nbsp;&nbsp;&nbsp;&nbsp;edge.column=79<br />
+     </div>
+      <p>The "match" statement is like "if" but implicitly matches patterns against $(RelativePath), allowing wildcards *, ?;
+      sets [a-z%]; and alternates {cpp,cxx,ixx}.
+      Only Unix-style "/" directory separators may be used as "\" may be used as a quote.
+      If there is no "/" in the pattern then "**/" is prepended to allow matching in any subdirectory.
+      There should be exactly one space between "match" and the pattern and trailing whitespace is removed.</p>
+     <div class="example">
+     match *.{js,py}<br />
+     &nbsp;&nbsp;&nbsp;&nbsp;colour.code.comment.line=fore:#70B060<br />
+     match lexilla/**/Lex*.[ci]xx<br />
+     &nbsp;&nbsp;&nbsp;&nbsp;font.comment=Cascadia Code<br />
+     &nbsp;&nbsp;&nbsp;&nbsp;lexer.cpp.escape.sequence=1<br />
+     </div>
     <p>
       <a name="property-module"></a>
       The 'module' statement is meant for use in the single-file distribution Sc1 where all of the
@@ -1341,6 +1365,14 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         Setting pathbar.visible to 1 makes the path bar visible on GTK.
         </td>
       </tr>
+      <tr class="gtkonly" id='property-pathbar.selectable'>
+        <td>
+          pathbar.selectable
+        </td>
+        <td>
+          Setting pathbar.selectable to 1 makes the visible path bar selectable on GTK.
+        </td>
+      </tr>
       <tr id='property-undo.redo.lazy'>
         <td>
           undo.redo.lazy
@@ -1348,6 +1380,32 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <td>
           Setting this to 1 changes the technique used to determine when to enable or disable
           tool bar buttons to be less accurate. This may improve performance on slow machines.
+        </td>
+      </tr>
+      <tr id='property-change.history'>
+        <td>
+          change.history<br />
+          marker.reverted.to.origin<br />
+          marker.saved<br />
+          marker.modified<br />
+          marker.reverted.to.modified<br />
+          indicator.reverted.to.origin.insertion<br />
+          indicator.reverted.to.origin.deletion<br />
+          indicator.saved.insertion<br />
+          indicator.saved.deletion<br />
+          indicator.modified.insertion<br />
+          indicator.modified.deletion<br />
+          indicator.reverted.to.modified.insertion<br />
+          indicator.reverted.to.modified.deletion
+        </td>
+        <td>
+          The change.history property controls whether changes to the document (insertions, deletions, saved chanes, ...) are
+          shown as margin markers or indicators within text.<br .>
+          It is a set of bit flags (1=enable, 2=margin markers, 4=indicators in text) so the most likely settings are
+          0=disabled; 3=enabled with margin marks, or 7=enabled with margin markers and in-text indicators.<br />
+          There is a default set of visuals for this feature but they may be altered with the marker.* and indicator.* properties.<br />
+          As change history can only be enabled when the file is in its original state, this property only takes effect when
+          a file is loaded.
         </td>
       </tr>
       <tr id='property-statusbar.visible'>
@@ -1381,7 +1439,7 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         Property values may be used in this text using the $() syntax.
           Commonly used properties are: ReadOnly, EOLMode, BufferLength,
           NbOfLines (in buffer), SelLength (chars), SelHeight (lines).
-          Extra properties defined for the status bar are LineNumber, ColumnNumber, and
+          Extra properties defined for the status bar are LineNumber, ColumnNumber, ZoomFactor, and
           OverType which is either "OVR" or "INS" depending on the overtype status.
           You can also use file properties, which, unlike those above, are not updated
           on each keystroke: FileName or FileNameExt, FileDate and FileTime and
@@ -2379,9 +2437,17 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <td>fold.cil.comment.multiline</td>
         <td>Set this property to 0 to disable folding multi-line comments when fold.comment=1.</td>
         </tr>
+        <tr id='property-fold.coffeescript.comment'>
+        <td>fold.coffeescript.comment</td>
+        <td>Set to 1 to allow folding of comment blocks in CoffeeScript.</td>
+        </tr>
         <tr id='property-fold.comment'>
         <td>fold.comment</td>
         <td>This option enables folding multi-line comments and explicit fold points when using the C++ lexer. Explicit fold points allows adding extra folding by placing a //{ comment at the start and a //} at the end of a section that should fold.</td>
+        </tr>
+        <tr id='property-fold.comment.yaml'>
+        <td>fold.comment.yaml</td>
+        <td>Set to 1 to allow folding of comment blocks in YAML.</td>
         </tr>
         <tr id='property-fold.cpp.comment.explicit'>
         <td>fold.cpp.comment.explicit</td>
@@ -2454,6 +2520,10 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <tr id='property-fold.fsharp.preprocessor'>
         <td>fold.fsharp.preprocessor</td>
         <td>Setting this option to 1 enables folding of F# compiler directives.</td>
+        </tr>
+        <tr id='property-fold.gdscript.quotes'>
+        <td>fold.gdscript.quotes</td>
+        <td>This option enables folding multi-line quoted strings when using the GDScript lexer.</td>
         </tr>
         <tr id='property-fold.haskell.imports'>
         <td>fold.haskell.imports</td>
@@ -2543,6 +2613,10 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <td>fold.sql.at.else</td>
         <td>This option enables SQL folding on a "ELSE" and "ELSIF" line of an IF statement.</td>
         </tr>
+        <tr id='property-fold.sql.only.begin'>
+        <td>fold.sql.only.begin</td>
+        <td>Set to 1 to only fold on 'begin' but not other keywords.</td>
+        </tr>
         <tr id='property-fold.verilog.flags'>
         <td>fold.verilog.flags</td>
         <td>This option enables folding module definitions. Typically source files contain only one module definition so this option is somewhat useless.</td>
@@ -2566,6 +2640,30 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <tr id='property-lexer.baan.styling.within.preprocessor'>
         <td>lexer.baan.styling.within.preprocessor</td>
         <td>For Baan code, determines whether all preprocessor code is styled in the preprocessor style (0, the default) or only from the initial # to the end of the command word(1).</td>
+        </tr>
+        <tr id='property-lexer.bash.command.substitution'>
+        <td>lexer.bash.command.substitution</td>
+        <td>Set how to highlight $() command substitution. 0 (the default) highlighted as backticks. 1 highlighted inside. 2 highlighted inside with extra scope tracking.</td>
+        </tr>
+        <tr id='property-lexer.bash.special.parameter'>
+        <td>lexer.bash.special.parameter</td>
+        <td>Set shell (default is Bash) special parameters.</td>
+        </tr>
+        <tr id='property-lexer.bash.styling.inside.backticks'>
+        <td>lexer.bash.styling.inside.backticks</td>
+        <td>Set this property to 1 to highlight shell expansions inside backticks.</td>
+        </tr>
+        <tr id='property-lexer.bash.styling.inside.heredoc'>
+        <td>lexer.bash.styling.inside.heredoc</td>
+        <td>Set this property to 1 to highlight shell expansions inside here document.</td>
+        </tr>
+        <tr id='property-lexer.bash.styling.inside.parameter'>
+        <td>lexer.bash.styling.inside.parameter</td>
+        <td>Set this property to 1 to highlight shell expansions inside ${} parameter expansion.</td>
+        </tr>
+        <tr id='property-lexer.bash.styling.inside.string'>
+        <td>lexer.bash.styling.inside.string</td>
+        <td>Set this property to 1 to highlight shell expansions inside string.</td>
         </tr>
         <tr id='property-lexer.cpp.allow.dollars'>
         <td>lexer.cpp.allow.dollars</td>
@@ -2631,6 +2729,26 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <td>lexer.flagship.styling.within.preprocessor</td>
         <td>For Harbour code, determines whether all preprocessor code is styled in the preprocessor style (0) or only from the initial # to the end of the command word(1, the default). It also determines how to present text, dump, and disabled code.</td>
         </tr>
+        <tr id='property-lexer.gdscript.keywords2.no.sub.identifiers'>
+        <td>lexer.gdscript.keywords2.no.sub.identifiers</td>
+        <td>When enabled, it will not style keywords2 items that are used as a sub-identifier. Example: when set, will not highlight "foo.open" when "open" is a keywords2 item.</td>
+        </tr>
+        <tr id='property-lexer.gdscript.literals.binary'>
+        <td>lexer.gdscript.literals.binary</td>
+        <td>Set to 0 to not recognise binary and octal literals: 0b1011 0o712.</td>
+        </tr>
+        <tr id='property-lexer.gdscript.strings.over.newline'>
+        <td>lexer.gdscript.strings.over.newline</td>
+        <td>Set to 1 to allow strings to span newline characters.</td>
+        </tr>
+        <tr id='property-lexer.gdscript.unicode.identifiers'>
+        <td>lexer.gdscript.unicode.identifiers</td>
+        <td>Set to 0 to not recognise Unicode identifiers.</td>
+        </tr>
+        <tr id='property-lexer.gdscript.whinge.level'>
+        <td>lexer.gdscript.whinge.level</td>
+        <td>For GDScript code, checks whether indenting is consistent. The default, 0 turns off indentation checking, 1 checks whether each line is potentially inconsistent with the previous line, 2 checks whether any space characters occur before a tab character in the indentation, 3 checks whether any spaces are in the indentation, and 4 checks for any tab characters in the indentation. 1 is a good level to use.</td>
+        </tr>
         <tr id='property-lexer.haskell.allow.hash'>
         <td>lexer.haskell.allow.hash</td>
         <td>Set to 0 to disallow the '#' character at the end of identifiers and literals with the haskell lexer (GHC -XMagicHash extension)</td>
@@ -2675,6 +2793,10 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <td>lexer.julia.highlight.typeannotation</td>
         <td>This option enables highlighting of the type identifier after `::`.</td>
         </tr>
+        <tr id='property-lexer.markdown.header.eolfill'>
+        <td>lexer.markdown.header.eolfill</td>
+        <td>Set to 1 to highlight all ATX header text.</td>
+        </tr>
         <tr id='property-lexer.nim.raw.strings.highlight.ident'>
         <td>lexer.nim.raw.strings.highlight.ident</td>
         <td>Set to 1 to enable highlighting generalized raw string identifiers. Generalized raw string identifiers are anything other than r (or R).</td>
@@ -2682,6 +2804,14 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <tr id='property-lexer.props.allow.initial.spaces'>
         <td>lexer.props.allow.initial.spaces</td>
         <td>For properties files, set to 0 to style all lines that start with whitespace in the default style. This is not suitable for SciTE .properties files which use indentation for flow control but can be used for RFC2822 text where indentation is used for continuation lines.</td>
+        </tr>
+        <tr id='property-lexer.python.decorator.attributes'>
+        <td>lexer.python.decorator.attributes</td>
+        <td>Set to 1 to recognise Python decorator attributes.</td>
+        </tr>
+        <tr id='property-lexer.python.identifier.attributes'>
+        <td>lexer.python.identifier.attributes</td>
+        <td>Set to 1 to recognise Python identifier attributes.</td>
         </tr>
         <tr id='property-lexer.python.keywords2.no.sub.identifiers'>
         <td>lexer.python.keywords2.no.sub.identifiers</td>
@@ -2711,6 +2841,10 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <td>lexer.python.unicode.identifiers</td>
         <td>Set to 0 to not recognise Python 3 Unicode identifiers.</td>
         </tr>
+        <tr id='property-lexer.r.escape.sequence'>
+        <td>lexer.r.escape.sequence</td>
+        <td>Set to 1 to enable highlighting of escape sequences in strings.</td>
+        </tr>
         <tr id='property-lexer.rust.fold.at.else'>
         <td>lexer.rust.fold.at.else</td>
         <td>This option enables Rust folding on a "} else {" line of an if statement.</td>
@@ -2719,9 +2853,17 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <td>lexer.sql.allow.dotted.word</td>
         <td>Set to 1 to colourise recognized words with dots (recommended for Oracle PL/SQL objects).</td>
         </tr>
+        <tr id='property-lexer.sql.backticks.identifier'>
+        <td>lexer.sql.backticks.identifier</td>
+        <td>Recognise backtick quoting of identifiers.</td>
+        </tr>
         <tr id='property-lexer.sql.numbersign.comment'>
         <td>lexer.sql.numbersign.comment</td>
         <td>If "lexer.sql.numbersign.comment" property is set to 0 a line beginning with '#' will not be a comment.</td>
+        </tr>
+        <tr id='property-lexer.vb.strings.multiline'>
+        <td>lexer.vb.strings.multiline</td>
+        <td>Set to 1 to allow strings to continue over line ends.</td>
         </tr>
         <tr id='property-lexer.verilog.allupperkeywords'>
         <td>lexer.verilog.allupperkeywords</td>
@@ -2743,9 +2885,29 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <td>lexer.verilog.update.preprocessor</td>
         <td>Set to 1 to update preprocessor definitions when `define, `undef, or `undefineall found.</td>
         </tr>
+        <tr id='property-lexer.visualprolog.backquoted.strings'>
+        <td>lexer.visualprolog.backquoted.strings</td>
+        <td>Set to 1 to enable using back quotes (``) to delimit strings.</td>
+        </tr>
+        <tr id='property-lexer.visualprolog.verbatim.strings'>
+        <td>lexer.visualprolog.verbatim.strings</td>
+        <td>Set to 0 to disable highlighting verbatim strings using '@'.</td>
+        </tr>
         <tr id='property-lexer.xml.allow.scripts'>
         <td>lexer.xml.allow.scripts</td>
         <td>Set to 0 to disable scripts in XML.</td>
+        </tr>
+        <tr id='property-nsis.ignorecase'>
+        <td>nsis.ignorecase</td>
+        <td>Set to 1 to ignore case for NSIS.</td>
+        </tr>
+        <tr id='property-nsis.uservars'>
+        <td>nsis.uservars</td>
+        <td>Set to 1 to recognise user defined variables in NSIS.</td>
+        </tr>
+        <tr id='property-ps.level'>
+        <td>ps.level</td>
+        <td>Define level (0..3) of PostScript handled and thus set of keywords. Default is 3.</td>
         </tr>
         <tr id='property-sql.backslash.escapes'>
         <td>sql.backslash.escapes</td>
@@ -3001,6 +3163,17 @@ Prev File|IDM_PREVFILE|<br/>
         level 3 dramatically speeds up dynamic wrapping by around 25 times on large
         source files so is a very good option to use when wrapping is turned on and
         memory is plentiful.
+        </td>
+      </tr>
+      <tr id='property-threads.layout'>
+        <td>
+        threads.layout
+        </td>
+        <td>
+       Specify how many threads to use for layout of wide lines.
+       Improves performance considerably - a 4 core processor will often reduce layout
+       time by a factor of almost 4.
+       Will be clamped to the maximum hardware concurrency available.
         </td>
       </tr>
       <tr id='property-open.filter'>
@@ -3320,7 +3493,7 @@ Prev File|IDM_PREVFILE|<br/>
           Controls the animated golden match indicator on macOS.
         The default value, 1, shows and animates the find indicator then fades it away so surrounding text can be seen clearly.
         Use the value 0 to disable the find indicator and the value 2 to keep the find indicator displayed.
-          This setting is not available on OS X 10.6.
+          This setting is not available on macOS 10.6.
         </td>
       </tr>
       <tr id='property-find.command'>
@@ -3409,6 +3582,18 @@ c:\cygwin\bin\xargs -0 grep $(find.wholeword) $(find.matchcase) -G -n "$(find.wh
         <td>
         If find.in.binary is 1 then Find in Files displays matches in binary files.
         For Find in Files, a binary file is a file that contains a NUL byte in the first 64K block read from the file.
+        </td>
+      </tr>
+      <tr id='property-find.exclude'>
+        <td>
+          find.exclude
+        </td>
+        <td>
+        This is a set of file patterns to <strong>not</strong> search in with Find in Files.
+        Both file names and directory names can appear here.
+        <div class="example">
+find.exclude=*.bak *.pyc debug release<br />
+</div>
         </td>
       </tr>
       <tr id='property-find.in.directory'>
@@ -3551,23 +3736,32 @@ imports.include=fortran lisp
         The imports.exclude property is examined only if imports.include is empty or missing.
         This property stops the named files from being imported.<br />
           The properties files shipped with SciTE, and which can be included or excluded with these properties, are:<br />
-          abaqus ada asl asm asn1 au3 ave avs baan blitzbasic
-          bullant caml cmake cobol coffeescript conf cpp csound css d ecl
-          eiffel erlang escript flagship forth fortran freebasic gap haskell
-          hex html inno kix latex lisp lot lout lua matlab maxima metapost
-          mmixal modula3 nimrod nncrontab nsis opal oscript others
-          pascal perl pov powerpro powershell ps purebasic python r rebol
-          registry ruby rust scriptol smalltalk sorcins specman spice sql
-          tacl tal tcl tex txt2tags vb verilog vhdl yaml.
+          abaqus ada asciidoc asl asm asn1 au3 ave avs baan
+          blitzbasic bullant caml cil cmake cobol coffeescript
+          conf cpp csound css d dataflex ecl eiffel erlang
+          escript flagship forth fortran freebasic fsharp gap
+          haskell hex html inno json kix latex lisp lot lout
+          lua markdown matlab maxima metapost mmixal modula3
+          nim nncrontab nsis opal oscript others pascal
+          perl pov powerpro powershell ps purebasic python r
+          raku rebol registry ruby rust sas scriptol smalltalk
+          sorcins specman spice sql tacl tal tcl tex txt2tags
+          vb verilog vhdl visualprolog yaml.
         </td>
       </tr>
       <tr id='property-command.discover.properties'>
         <td>
-        command.discover.properties
+        <a name='property-discover.properties'></a>
+        command.discover.properties<br />
+        discover.properties
         </td>
         <td>
         This property can be used to run a program to determine file encoding and other properties
         when a file is loaded.<br />
+        Property discovery is disabled by default and must first be enabled by setting
+        discover.properties to 1 in user properties.
+        The extra step is a security safeguard since command.discover.properties may perform any
+        command silently and automatically and be set in local properties for a shared directory or in a downloaded project.<br />
         The program should print a list of property=value lines for each property it wants to set.
         This is the same format as properties files.<br />
         <div class="example">
@@ -3754,17 +3948,34 @@ imports.include=fortran lisp
           The lexers determine a style number for each lexical type, such as keyword, comment or
           number. These settings determine the visual style to be used for each style number of
           each lexer.<br />
-           The value of each setting is a set of ',' separated fields, some of which have a
-          subvalue after a ':'. The fields are: <div class="example">font, size, fore, back, italics, notitalics, bold,
+           The value of each setting is a set of ',' separated attributes, some of which have a
+          subvalue after a ':'. The attributes are: <div class="example">font, size, fore, back, italics, notitalics, bold,
           notbold, weight, eolfilled, noteolfilled, underlined, notunderlined, case,
-          visible, notvisible, changeable, and notchangeable</div>
-        The font field has a subvalue which is the name of
-          the font, the fore and back have colour subvalues,
-          the size field has a (fractional) numeric size subvalue,
-          the weight field has a numeric size subvalue (1.. 999: 100=light, 400=normal, 700=bold),
-          the case field has a subvalue of 'm', 'u', 'l', or 'c' for miXed, UPPER, lower, or Camel case,
-          and the bold, italics and eolfilled fields have no subvalue. The value
-          "fore:#FF0000,font:Courier,size:14" represents 14 point, red Courier text.<br />
+          visible, notvisible, invisiblerepresentation, changeable, and notchangeable</div>
+         <table cellpadding="1" cellspacing="0" border="1" summary="Style fields">
+          <tr><th>attribute</th><th>subvalue</th></tr>
+          <tr><td>font</td><td>name of the font</td></tr>
+          <tr><td>size</td><td>numeric size, possibly fractional</td></tr>
+          <tr><td>fore</td><td>a hex colour value preceded by '#' such as #008020</td></tr>
+          <tr><td>back</td><td>a hex colour value preceded by '#' such as #008020</td></tr>
+          <tr><td>italics</td><td></td></tr>
+          <tr><td>notitalics</td><td></td></tr>
+          <tr><td>bold</td><td></td></tr>
+          <tr><td>notbold</td><td></td></tr>
+          <tr><td>weight</td><td>numeric 1.. 999: 100=light, 400=normal, 700=bold</td></tr>
+          <tr><td>eolfilled</td><td></td></tr>
+          <tr><td>noteolfilled</td><td></td></tr>
+          <tr><td>underlined</td><td></td></tr>
+          <tr><td>notunderlined</td><td></td></tr>
+          <tr><td>case</td><td>'m', 'u', 'l', or 'c' for miXed, UPPER, lower, or Camel case</td></tr>
+          <tr><td>visible</td><td></td></tr>
+          <tr><td>notvisible</td><td></td></tr>
+          <tr><td>invisiblerepresentation</td><td>character as UTF-8 text to represent this style when invisible</td></tr>
+          <tr><td>changeable</td><td></td></tr>
+          <tr><td>notchangeable</td><td></td></tr>
+         </table>
+          The value
+          "fore:#FF0000,font:Courier,bold,size:14" represents 14 point, bold red Courier text.<br />
            A global style can be set up using style.*.<i>stylenumber</i>. Any style options set in
           the global style will be inherited by each lexer style unless overridden.
         </td>
@@ -3899,7 +4110,6 @@ imports.include=fortran lisp
         the font name and size to be used when the Use Monospaced Font
         command is performed.
         </td>
-      </tr>
       </tr>
       <tr id='property-font.monospaced.list'>
         <td>
@@ -4283,7 +4493,6 @@ groupundo - yes or no
           Sets the stroke width of the fold symbols in hundredths of a pixel.
           The default value, 100 is good for standard displays but 200 may be better for high DPI displays,
         </td>
-      </tr>
       </tr>
       <tr id='property-fold.margin.width'>
         <td>
@@ -4888,7 +5097,7 @@ groupundo - yes or no
      </tr>
     </table>
     <h3 id="IndicatorProperty">
-       Indicator definition
+       Indicator and marker definitions
     </h3>
     <p>Properties that define indicators look like</p>
     <div class="example">
@@ -4904,7 +5113,7 @@ groupundo - yes or no
       <td>style</td>
       <td>one of plain, squiggle, tt, diagonal, strike, hidden, box, roundbox, straightbox, fullbox, dash,
       dots, squigglelow, dotbox, squigglepixmap, compositionthick, compositionthin,
-      textfore, gradient, gradientcentre, point, or pointcharacter.<br />
+      textfore, gradient, gradientcentre, point, pointcharacter, or pointtop.<br />
       </td>
       <td>plain</td>
      </tr>
@@ -4934,9 +5143,39 @@ groupundo - yes or no
       <td>yes</td>
      </tr>
     </table>
-    </p>
     <p>Samples:<br />
     <img src="SciTEIndicators.png" alt="Indicator samples" /></p>
+    <p>Properties that define markers look like</p>
+    <div class="example">
+       marker.saved=style:leftrect,fore:#00A000,back:#A0A000</div>
+    <table cellpadding="1" cellspacing="0" border="1" summary="Caret policy">
+     <tr>
+      <th>attribute</th>
+      <th>value</th>
+      <th>default</th>
+     </tr>
+     <tr>
+      <td>style</td>
+      <td>one of circle, roundrect, arrow, smallrect, shortarrow, empty, arrowdown,
+      minus, plus, vline, lcorner, tcorner, boxplus, boxplusconnected,
+      boxminus, boxminusconnected, lcornercurve, tcornercurve,
+      circleplus, circleplusconnected, circleminus, circleminusconnected,
+      background, dotdotdot, arrows, fullrect, leftrect,
+      underline, bookmark, verticalbookmark, or bar.<br />
+      </td>
+      <td>circle</td>
+     </tr>
+     <tr>
+      <td>colour or color or fore</td>
+      <td>a hex colour alpha value preceded by '#' such as #00802040 or #008020.</td>
+      <td>black</td>
+     </tr>
+     <tr>
+      <td>back</td>
+      <td>a hex colour alpha value preceded by '#' such as #00802040 or #008020.</td>
+      <td>white</td>
+     </tr>
+    </table>
     <h3 id="NewLanguage">
        Supporting a new language
     </h3>

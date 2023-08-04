@@ -75,12 +75,12 @@ vpath %.h ../src ../../lexilla/include ../../lexilla/access ../../scintilla/incl
 vpath %.cxx ../src ../../lexilla/access ../../scintilla/call
 vpath %.a ../../lexilla/bin ../../scintilla/bin
 
-LIBS += -lgdi32 -luser32 -limm32 -lole32 -luuid -loleaut32 -lmsimg32 -lshell32 -lcomdlg32 -lcomctl32 -ladvapi32
+LIBS += -lgdi32 -luser32 -limm32 -lole32 -luuid -loleaut32 -lshell32 -lcomdlg32 -lcomctl32 -ladvapi32
 
 CXXFLAGS += --std=c++17
 
 DEFINES += -D$(if $(DEBUG),DEBUG,NDEBUG)
-BASE_FLAGS += $(if $(DEBUG),-g,-Os)
+BASE_FLAGS += $(if $(DEBUG),-g,-O3)
 
 ifndef DEBUG
 ifndef CLANG
@@ -136,6 +136,7 @@ SHAREDOBJS=\
 	LexillaAccess.o \
 	MatchMarker.o \
 	MultiplexExtension.o \
+	PathMatch.o \
 	PropSetFile.o \
 	ScintillaCall.o \
 	ScintillaWindow.o \
@@ -197,7 +198,7 @@ OBJSSTATIC = \
 $(PROGSTATIC): $(OBJSSTATIC)
 	$(CXX) $(BASE_FLAGS) $(STRIPFLAG) $(SUBSYSTEM_OPT) -static -o $@ $^ $(LDFLAGS) $(LIBS) $(LDLIBS)
 
-# Automatically generate dependencies for most files with "make deps"
+# Automatically generate dependencies for most files with "make depend"
 include deps.mak
 
 Sc1.o: SciTEWin.cxx SciTEWin.h SciTE.h PropSetFile.h \

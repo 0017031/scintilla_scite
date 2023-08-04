@@ -19,6 +19,7 @@ public:
 
 class FindReplaceStrip : public Strip, public SearchUI, public CheckDrawWatcher {
 public:
+	bool performFilter = true;
 	WComboBoxEntry wComboFind;
 	std::vector<std::unique_ptr<WCheckDraw>> wCheck;
 	bool initializingSearch;
@@ -51,6 +52,7 @@ public:
 	WButton wButtonMarkAll;
 
 	FindStrip() {
+		performFilter = false;
 	}
 	void Creation(GtkWidget *container) override;
 	virtual void Destruction();
@@ -129,7 +131,7 @@ public:
 	bool KeyDown(const GdkEventKey *event) override;
 	static void ActivateSignal(GtkWidget *w, UserStrip *pStrip);
 	static gboolean EscapeSignal(GtkWidget *w, GdkEventKey *event, UserStrip *pStrip);
-	void ClickThis(GtkWidget *w);
+	void ClickThis(const GtkWidget *w);
 	static void ClickSignal(GtkWidget *w, UserStrip *pStrip);
 	void ChildFocus(GtkWidget *widget) override;
 	gboolean Focus(GtkDirectionType direction) override;

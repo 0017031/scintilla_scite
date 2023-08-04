@@ -10,10 +10,6 @@
 #include "SciTEWin.h"
 #include "DLLFunction.h"
 
-#ifndef WM_DPICHANGED
-#define WM_DPICHANGED 0x02E0
-#endif
-
 #ifndef NO_EXTENSIONS
 #include "MultiplexExtension.h"
 
@@ -55,87 +51,85 @@ static GUI::gui_string GetErrorMessage(DWORD nRet) {
 	}
 }
 
-long SciTEKeys::ParseKeyCode(const char *mnemonic) {
-	SA::KeyMod modsInKey = static_cast<SA::KeyMod>(0);
+long SciTEKeys::ParseKeyCode(std::string_view mnemonic) {
+	std::string sKey(mnemonic);
+
+	SA::KeyMod modsInKey = SA::KeyMod::Norm;
+	if (RemoveStringOnce(sKey, "Ctrl+"))
+		modsInKey = SA::KeyMod::Ctrl;
+	if (RemoveStringOnce(sKey, "Shift+"))
+		modsInKey = modsInKey | SA::KeyMod::Shift;
+	if (RemoveStringOnce(sKey, "Alt+"))
+		modsInKey = modsInKey | SA::KeyMod::Alt;
+
 	int keyval = -1;
 
-	if (mnemonic && *mnemonic) {
-		std::string sKey = mnemonic;
-
-		if (RemoveStringOnce(sKey, "Ctrl+"))
-			modsInKey = modsInKey | SA::KeyMod::Ctrl;
-		if (RemoveStringOnce(sKey, "Shift+"))
-			modsInKey = modsInKey | SA::KeyMod::Shift;
-		if (RemoveStringOnce(sKey, "Alt+"))
-			modsInKey = modsInKey | SA::KeyMod::Alt;
-
-		if (sKey.length() == 1) {
-			keyval = VkKeyScan(sKey.at(0)) & 0xFF;
-		} else if (sKey.length() > 1) {
-			if ((sKey.at(0) == 'F') && (IsADigit(sKey.at(1)))) {
-				sKey.erase(0, 1);
-				const int fkeyNum = atoi(sKey.c_str());
-				if (fkeyNum >= 1 && fkeyNum <= 12)
-					keyval = fkeyNum - 1 + VK_F1;
-			} else if ((sKey.at(0) == 'V') && (IsADigit(sKey.at(1)))) {
-				sKey.erase(0, 1);
-				const int vkey = atoi(sKey.c_str());
-				if (vkey > 0 && vkey <= 0x7FFF)
-					keyval = vkey;
-			} else if (StartsWith(sKey, "Keypad")) {
-				sKey.erase(0, strlen("Keypad"));
-				if ((sKey.length() > 0) && IsADigit(sKey.at(0))) {
-					const int keyNum = atoi(sKey.c_str());
-					if (keyNum >= 0 && keyNum <= 9)
-						keyval = keyNum + VK_NUMPAD0;
-				} else if (sKey == "Plus") {
-					keyval = VK_ADD;
-				} else if (sKey == "Minus") {
-					keyval = VK_SUBTRACT;
-				} else if (sKey == "Decimal") {
-					keyval = VK_DECIMAL;
-				} else if (sKey == "Divide") {
-					keyval = VK_DIVIDE;
-				} else if (sKey == "Multiply") {
-					keyval = VK_MULTIPLY;
-				}
-			} else if (sKey == "Left") {
-				keyval = VK_LEFT;
-			} else if (sKey == "Right") {
-				keyval = VK_RIGHT;
-			} else if (sKey == "Up") {
-				keyval = VK_UP;
-			} else if (sKey == "Down") {
-				keyval = VK_DOWN;
-			} else if (sKey == "Insert") {
-				keyval = VK_INSERT;
-			} else if (sKey == "End") {
-				keyval = VK_END;
-			} else if (sKey == "Home") {
-				keyval = VK_HOME;
-			} else if (sKey == "Enter") {
-				keyval = VK_RETURN;
-			} else if (sKey == "Space") {
-				keyval = VK_SPACE;
-			} else if (sKey == "Tab") {
-				keyval = VK_TAB;
-			} else if (sKey == "Escape") {
-				keyval = VK_ESCAPE;
-			} else if (sKey == "Delete") {
-				keyval = VK_DELETE;
-			} else if (sKey == "PageUp") {
-				keyval = VK_PRIOR;
-			} else if (sKey == "PageDown") {
-				keyval = VK_NEXT;
-			} else if (sKey == "Win") {
-				keyval = VK_LWIN;
-			} else if (sKey == "Menu") {
-				keyval = VK_APPS;
-			} else if (sKey == "Backward") {
-				keyval = VK_BROWSER_BACK;
-			} else if (sKey == "Forward") {
-				keyval = VK_BROWSER_FORWARD;
+	if (sKey.length() == 1) {
+		keyval = VkKeyScan(sKey.at(0)) & 0xFF;
+	} else if (sKey.length() > 1) {
+		if ((sKey.at(0) == 'F') && (IsADigit(sKey.at(1)))) {
+			sKey.erase(0, 1);
+			const int fkeyNum = IntegerFromString(sKey, 0);
+			if (fkeyNum >= 1 && fkeyNum <= 12)
+				keyval = fkeyNum - 1 + VK_F1;
+		} else if ((sKey.at(0) == 'V') && (IsADigit(sKey.at(1)))) {
+			sKey.erase(0, 1);
+			const int vkey = IntegerFromString(sKey, 0);
+			if (vkey > 0 && vkey <= 0x7FFF)
+				keyval = vkey;
+		} else if (StartsWith(sKey, "Keypad")) {
+			sKey.erase(0, strlen("Keypad"));
+			if ((sKey.length() > 0) && IsADigit(sKey.at(0))) {
+				const int keyNum = IntegerFromString(sKey, -1);
+				if (keyNum >= 0 && keyNum <= 9)
+					keyval = keyNum + VK_NUMPAD0;
+			} else if (sKey == "Plus") {
+				keyval = VK_ADD;
+			} else if (sKey == "Minus") {
+				keyval = VK_SUBTRACT;
+			} else if (sKey == "Decimal") {
+				keyval = VK_DECIMAL;
+			} else if (sKey == "Divide") {
+				keyval = VK_DIVIDE;
+			} else if (sKey == "Multiply") {
+				keyval = VK_MULTIPLY;
 			}
+		} else if (sKey == "Left") {
+			keyval = VK_LEFT;
+		} else if (sKey == "Right") {
+			keyval = VK_RIGHT;
+		} else if (sKey == "Up") {
+			keyval = VK_UP;
+		} else if (sKey == "Down") {
+			keyval = VK_DOWN;
+		} else if (sKey == "Insert") {
+			keyval = VK_INSERT;
+		} else if (sKey == "End") {
+			keyval = VK_END;
+		} else if (sKey == "Home") {
+			keyval = VK_HOME;
+		} else if (sKey == "Enter") {
+			keyval = VK_RETURN;
+		} else if (sKey == "Space") {
+			keyval = VK_SPACE;
+		} else if (sKey == "Tab") {
+			keyval = VK_TAB;
+		} else if (sKey == "Escape") {
+			keyval = VK_ESCAPE;
+		} else if (sKey == "Delete") {
+			keyval = VK_DELETE;
+		} else if (sKey == "PageUp") {
+			keyval = VK_PRIOR;
+		} else if (sKey == "PageDown") {
+			keyval = VK_NEXT;
+		} else if (sKey == "Win") {
+			keyval = VK_LWIN;
+		} else if (sKey == "Menu") {
+			keyval = VK_APPS;
+		} else if (sKey == "Backward") {
+			keyval = VK_BROWSER_BACK;
+		} else if (sKey == "Forward") {
+			keyval = VK_BROWSER_FORWARD;
 		}
 	}
 
@@ -263,6 +257,16 @@ SciTEWin::SciTEWin(Extension *ext) : SciTEBase(ext) {
 }
 
 SciTEWin::~SciTEWin() {
+	for (Buffer &buffer : buffers.buffers) {
+		// At this point, there should be no documents but sometimes there are
+		// which may be due to asynchronous I/O.
+		// wEditor has been closed so can't perform correct release of documents.
+		// Show debugger in this case.
+		assert(!buffer.doc);
+		// Drop ownership, leads to leak but exiting anyway.
+		std::ignore = buffer.doc.release();
+	}
+
 	if (hDevMode)
 		::GlobalFree(hDevMode);
 	if (hDevNames)
@@ -312,11 +316,14 @@ void SciTEWin::Register(HINSTANCE hInstance_) {
 		exit(FALSE);
 }
 
-static int CodePageFromName(const std::string &encodingName) {
+namespace {
+
+int CodePageFromName(const std::string &encodingName) {
 	struct Encoding {
 		const char *name;
 		int codePage;
-	} knownEncodings[] = {
+	};
+	const Encoding	knownEncodings[] = {
 		{ "ascii", CP_UTF8 },
 		{ "utf-8", CP_UTF8 },
 		{ "latin1", 1252 },
@@ -339,24 +346,24 @@ static int CodePageFromName(const std::string &encodingName) {
 	return CP_UTF8;
 }
 
-static std::string StringEncode(std::wstring s, int codePage) {
-	if (s.length()) {
-		const int sLength = static_cast<int>(s.length());
-		const int cchMulti = ::WideCharToMultiByte(codePage, 0, s.c_str(), sLength, nullptr, 0, nullptr, nullptr);
+std::string StringEncode(std::wstring_view wsv, int codePage) {
+	if (wsv.length()) {
+		const int sLength = static_cast<int>(wsv.length());
+		const int cchMulti = ::WideCharToMultiByte(codePage, 0, wsv.data(), sLength, nullptr, 0, nullptr, nullptr);
 		std::string sMulti(cchMulti, 0);
-		::WideCharToMultiByte(codePage, 0, s.c_str(), sLength, &sMulti[0], cchMulti, nullptr, nullptr);
+		::WideCharToMultiByte(codePage, 0, wsv.data(), sLength, &sMulti[0], cchMulti, nullptr, nullptr);
 		return sMulti;
 	} else {
 		return std::string();
 	}
 }
 
-static std::wstring StringDecode(std::string s, int codePage) {
-	if (s.length()) {
-		const int sLength = static_cast<int>(s.length());
-		const int cchWide = ::MultiByteToWideChar(codePage, 0, s.c_str(), sLength, nullptr, 0);
+std::wstring StringDecode(std::string_view sv, int codePage) {
+	if (sv.length()) {
+		const int sLength = static_cast<int>(sv.length());
+		const int cchWide = ::MultiByteToWideChar(codePage, 0, sv.data(), sLength, nullptr, 0);
 		std::wstring sWide(cchWide, 0);
-		::MultiByteToWideChar(codePage, 0, s.c_str(), sLength, &sWide[0], cchWide);
+		::MultiByteToWideChar(codePage, 0, sv.data(), sLength, &sWide[0], cchWide);
 		return sWide;
 	} else {
 		return std::wstring();
@@ -364,13 +371,15 @@ static std::wstring StringDecode(std::string s, int codePage) {
 }
 
 // Convert to UTF-8
-static std::string ConvertEncoding(const char *original, int codePage) {
+std::string ConvertEncoding(const char *original, int codePage) {
 	if (codePage == CP_UTF8) {
 		return original;
 	} else {
-		GUI::gui_string sWide = StringDecode(std::string(original), codePage);
+		GUI::gui_string sWide = StringDecode(original, codePage);
 		return GUI::UTF8FromString(sWide);
 	}
+}
+
 }
 
 void SciTEWin::ReadLocalization() {
@@ -384,9 +393,9 @@ void SciTEWin::ReadLocalization() {
 		// Get encoding
 		bool more = localiser.GetFirst(key, val);
 		while (more) {
-			std::string converted = ConvertEncoding(val, codePageNamed);
+			const std::string converted = ConvertEncoding(val, codePageNamed);
 			if (converted != "") {
-				localiser.Set(key, converted.c_str());
+				localiser.Set(key, converted);
 			}
 			more = localiser.GetNext(key, val);
 		}
@@ -464,8 +473,8 @@ void SciTEWin::ReadEmbeddedProperties() {
 		if (hmem) {
 			const void *pv = ::LockResource(hmem);
 			if (pv) {
-				propsEmbed.ReadFromMemory(
-					static_cast<const char *>(pv), size, FilePath(), filter, nullptr, 0);
+				propsEmbed.ReadFromMemory(std::string_view(static_cast<const char *>(pv), size),
+					FilePath(), filter, nullptr, 0);
 			}
 		}
 		::FreeResource(handProps);
@@ -484,7 +493,7 @@ SystemAppearance SciTEWin::WindowsAppearance() const noexcept {
 		DWORD val = 99;
 		DWORD cbData = sizeof(val);
 		const LSTATUS status = ::RegQueryValueExW(hkeyPersonalize, L"AppsUseLightTheme", nullptr,
-			&type, reinterpret_cast<LPBYTE>(&val), reinterpret_cast<LPDWORD>(&cbData));
+			&type, reinterpret_cast<LPBYTE>(&val), &cbData);
 		RegCloseKey(hkeyPersonalize);
 		if (status == ERROR_SUCCESS) {
 			currentAppearance.dark = val == 0;
@@ -606,8 +615,8 @@ void SciTEWin::ExecuteHelp(const char *cmd) {
 		if (pos != GUI::gui_string::npos) {
 			GUI::gui_string topic = s.substr(0, pos);
 			GUI::gui_string path = s.substr(pos + 1);
-			typedef HWND (WINAPI *HelpFn)(HWND, const wchar_t *, UINT, DWORD_PTR);
-			HelpFn fnHHW = reinterpret_cast<HelpFn>(::GetProcAddress(hHH, "HtmlHelpW"));
+			using HelpFn = HWND(WINAPI *)(HWND, const wchar_t *, UINT, DWORD_PTR);
+			HelpFn fnHHW = DLLFunction<HelpFn>(hHH, "HtmlHelpW");
 			if (fnHHW) {
 				XHH_AKLINK ak {};
 				ak.cbStruct = sizeof(ak);
@@ -753,16 +762,6 @@ void SciTEWin::Command(WPARAM wParam, LPARAM lParam) {
 		Activate(lParam);
 		break;
 
-	case IDM_FINISHEDEXECUTE: {
-			jobQueue.SetExecuting(false);
-			if (needReadProperties)
-				ReadProperties();
-			CheckMenus();
-			jobQueue.ClearJobs();
-			CheckReload();
-		}
-		break;
-
 	case IDM_ONTOP:
 		topMost = (topMost ? false : true);
 		::SetWindowPos(MainHWND(), (topMost ? HWND_TOPMOST : HWND_NOTOPMOST), 0, 0, 0, 0, SWP_NOMOVE + SWP_NOSIZE);
@@ -806,8 +805,8 @@ static UINT CodePageFromCharSet(SA::CharacterSet characterSet, UINT documentCode
 }
 
 void SciTEWin::OutputAppendEncodedStringSynchronised(const GUI::gui_string &s, int codePageDocument) {
-	std::string sMulti = StringEncode(s, codePageDocument);
-	OutputAppendStringSynchronised(sMulti.c_str());
+	const std::string sMulti = StringEncode(s, codePageDocument);
+	OutputAppendStringSynchronised(sMulti);
 }
 
 CommandWorker::CommandWorker() noexcept : pSciTE(nullptr) {
@@ -836,7 +835,6 @@ void SciTEWin::ResetExecution() {
 	CheckReload();
 	CheckMenus();
 	jobQueue.ClearJobs();
-	::SendMessage(MainHWND(), WM_COMMAND, IDM_FINISHEDEXECUTE, 0);
 }
 
 void SciTEWin::ExecuteNext() {
@@ -846,6 +844,52 @@ void SciTEWin::ExecuteNext() {
 	} else {
 		ResetExecution();
 	}
+}
+
+void SciTEWin::ExecuteGrep(const Job &jobToRun) {
+	// jobToRun.command is "(w|~)(c|~)(d|~)(b|~)\0files\0excluded\0text"
+	std::string_view grepCmd = jobToRun.command;
+	GrepFlags gf = GrepFlags::none;
+	if (grepCmd.front() == 'w')
+		gf = gf | GrepFlags::wholeWord;
+	grepCmd.remove_prefix(1);
+	if (grepCmd.front() == 'c')
+		gf = gf | GrepFlags::matchCase;
+	grepCmd.remove_prefix(1);
+	if (grepCmd.front() == 'd')
+		gf = gf | GrepFlags::dot;
+	grepCmd.remove_prefix(1);
+	if (grepCmd.front() == 'b')
+		gf = gf | GrepFlags::binary;
+	grepCmd.remove_prefix(1);
+	assert(grepCmd.front() == '\0');
+	grepCmd.remove_prefix(1);
+
+	const size_t endFiles = grepCmd.find('\0');
+	if (endFiles == std::string_view::npos) {
+		// Failure - must have NUL to separate files and excluded
+		return;
+	}
+	const std::string_view files = grepCmd.substr(0, endFiles);
+	grepCmd.remove_prefix(endFiles + 1);
+
+	const size_t endExcluded = grepCmd.find('\0');
+	if (endExcluded == std::string_view::npos) {
+		// Failure - must have NUL to separate excluded and text
+		return;
+	}
+	const std::string_view excluded = grepCmd.substr(0, endExcluded);
+	grepCmd.remove_prefix(endExcluded + 1);
+
+	const std::string_view text = grepCmd;
+
+	if (cmdWorker.outputScroll == 1)
+		gf = gf | GrepFlags::scroll;
+	SA::Position positionEnd = wOutput.Send(SCI_GETCURRENTPOS);
+	InternalGrep(gf, jobToRun.directory, GUI::StringFromUTF8(files), GUI::StringFromUTF8(excluded),
+		text, positionEnd);
+	if (FlagIsSet(gf, GrepFlags::scroll) && returnOutputToCommand)
+		wOutput.Send(SCI_GOTOPOS, positionEnd);
 }
 
 /**
@@ -874,29 +918,8 @@ DWORD SciTEWin::ExecuteOne(const Job &jobToRun) {
 	}
 
 	if (jobToRun.jobType == JobSubsystem::grep) {
-		// jobToRun.command is "(w|~)(c|~)(d|~)(b|~)\0files\0text"
-		const char *grepCmd = jobToRun.command.c_str();
-		if (*grepCmd) {
-			GrepFlags gf = grepNone;
-			if (*grepCmd == 'w')
-				gf = static_cast<GrepFlags>(gf | grepWholeWord);
-			grepCmd++;
-			if (*grepCmd == 'c')
-				gf = static_cast<GrepFlags>(gf | grepMatchCase);
-			grepCmd++;
-			if (*grepCmd == 'd')
-				gf = static_cast<GrepFlags>(gf | grepDot);
-			grepCmd++;
-			if (*grepCmd == 'b')
-				gf = static_cast<GrepFlags>(gf | grepBinary);
-			const char *findFiles = grepCmd + 2;
-			const char *findText = findFiles + strlen(findFiles) + 1;
-			if (cmdWorker.outputScroll == 1)
-				gf = static_cast<GrepFlags>(gf | grepScroll);
-			SA::Position positionEnd = wOutput.Send(SCI_GETCURRENTPOS);
-			InternalGrep(gf, jobToRun.directory.AsInternal(), GUI::StringFromUTF8(findFiles).c_str(), findText, positionEnd);
-			if ((gf & grepScroll) && returnOutputToCommand)
-				wOutput.Send(SCI_GOTOPOS, positionEnd);
+		if (!jobToRun.command.empty()) {
+			ExecuteGrep(jobToRun);
 		}
 		return exitcode;
 	}
@@ -1002,7 +1025,7 @@ DWORD SciTEWin::ExecuteOne(const Job &jobToRun) {
 			Substitute(input, "\n", "\n>> ");
 
 			OutputAppendStringSynchronised(">> ");
-			OutputAppendStringSynchronised(input.c_str());
+			OutputAppendStringSynchronised(input);
 			OutputAppendStringSynchronised("\n");
 		}
 
@@ -1091,7 +1114,7 @@ DWORD SciTEWin::ExecuteOne(const Job &jobToRun) {
 							cmdWorker.seenOutput = true;
 						}
 						// Display the data
-						OutputAppendStringSynchronised(&buffer[0], bytesRead);
+						OutputAppendStringSynchronised(std::string_view(buffer.data(), bytesRead));
 					}
 
 					::UpdateWindow(MainHWND());
@@ -1134,7 +1157,7 @@ DWORD SciTEWin::ExecuteOne(const Job &jobToRun) {
 			stExitMessage << std::setprecision(4) << cmdWorker.commandTime.Duration();
 		}
 		stExitMessage << "\n";
-		OutputAppendStringSynchronised(stExitMessage.str().c_str());
+		OutputAppendStringSynchronised(stExitMessage.str());
 
 		::CloseHandle(pi.hProcess);
 		::CloseHandle(pi.hThread);
@@ -1198,10 +1221,10 @@ void SciTEWin::ProcessExecute() {
 	PostOnMainThread(WORK_EXECUTE, &cmdWorker);
 }
 
-void SciTEWin::ShellExec(const std::string &cmd, const char *dir) {
+void SciTEWin::ShellExec(std::string_view cmd, std::string_view dir) {
 	// guess if cmd is an executable, if this succeeds it can
 	// contain spaces without enclosing it with "
-	std::string cmdLower = cmd;
+	std::string cmdLower(cmd);
 	LowerCaseAZ(cmdLower);
 	const char *mycmdLowered = cmdLower.c_str();
 
@@ -1212,7 +1235,7 @@ void SciTEWin::ShellExec(const std::string &cmd, const char *dir) {
 		s = strstr(mycmdLowered, ".bat");
 	if (!s)
 		s = strstr(mycmdLowered, ".com");
-	std::vector<char> cmdcopy(cmd.c_str(), cmd.c_str() + cmd.length() + 1);
+	std::string cmdcopy(cmd);
 	char *mycmdcopy = &cmdcopy[0];
 	char *mycmd;
 	char *mycmdEnd = nullptr;
@@ -1250,9 +1273,9 @@ void SciTEWin::ShellExec(const std::string &cmd, const char *dir) {
 			myparams = mycmdEnd;
 	}
 
-	GUI::gui_string sMycmd = GUI::StringFromUTF8(mycmd);
-	GUI::gui_string sMyparams = GUI::StringFromUTF8(myparams);
-	GUI::gui_string sDir = GUI::StringFromUTF8(dir);
+	const GUI::gui_string sMycmd = GUI::StringFromUTF8(mycmd);
+	const GUI::gui_string sMyparams = GUI::StringFromUTF8(myparams);
+	const GUI::gui_string sDir = GUI::StringFromUTF8(dir);
 
 	SHELLEXECUTEINFO exec {};
 	exec.cbSize = sizeof(exec);
@@ -1295,19 +1318,20 @@ void SciTEWin::Execute() {
 	cmdWorker.outputScroll = props.GetInt("output.scroll", 1);
 	cmdWorker.originalEnd = wOutput.Length();
 	cmdWorker.commandTime.Duration(true);
-	cmdWorker.flags = jobQueue.jobQueue[cmdWorker.icmd].flags;
+	const Job job = jobQueue.jobQueue[cmdWorker.icmd];
+	cmdWorker.flags = job.flags;
 	if (scrollOutput)
 		wOutput.GotoPos(wOutput.Length());
 
-	if (jobQueue.jobQueue[cmdWorker.icmd].jobType == JobSubsystem::extension) {
+	if (job.jobType == JobSubsystem::extension) {
 		// Execute extensions synchronously
-		if (jobQueue.jobQueue[cmdWorker.icmd].flags & jobGroupUndo)
+		if (job.flags & jobGroupUndo)
 			wEditor.BeginUndoAction();
 
 		if (extender)
-			extender->OnExecute(jobQueue.jobQueue[cmdWorker.icmd].command.c_str());
+			extender->OnExecute(job.command.c_str());
 
-		if (jobQueue.jobQueue[cmdWorker.icmd].flags & jobGroupUndo)
+		if (job.flags & jobGroupUndo)
 			wEditor.EndUndoAction();
 
 		ExecuteNext();
@@ -1334,7 +1358,7 @@ void SciTEWin::StopExecute() {
 			LONG errCode = GetLastError();
 			OutputAppendStringSynchronised("\n>BREAK Failed ");
 			std::string sError = StdStringFromInteger(errCode);
-			OutputAppendStringSynchronised(sError.c_str());
+			OutputAppendStringSynchronised(sError);
 			OutputAppendStringSynchronised("\n");
 		}
 		Sleep(100L);
@@ -1344,10 +1368,10 @@ void SciTEWin::StopExecute() {
 	jobQueue.SetCancelFlag(true);
 }
 
-void SciTEWin::AddCommand(const std::string &cmd, const std::string &dir, JobSubsystem jobType, const std::string &input, int flags) {
+void SciTEWin::AddCommand(std::string_view cmd, std::string_view dir, JobSubsystem jobType, std::string_view input, int flags) {
 	if (cmd.length()) {
 		if ((jobType == JobSubsystem::shell) && ((flags & jobForceQueue) == 0)) {
-			std::string pCmd = cmd;
+			std::string pCmd(cmd);
 			parameterisedCommand = "";
 			if (pCmd[0] == '*') {
 				pCmd.erase(0, 1);
@@ -1359,7 +1383,7 @@ void SciTEWin::AddCommand(const std::string &cmd, const std::string &dir, JobSub
 				ParamGrab();
 			}
 			pCmd = props.Expand(pCmd);
-			ShellExec(pCmd, dir.c_str());
+			ShellExec(pCmd, dir);
 		} else {
 			SciTEBase::AddCommand(cmd, dir, jobType, input, flags);
 		}
@@ -1454,61 +1478,58 @@ void SciTEWin::CreateUI() {
 		RestorePosition();
 
 	LocaliseMenus();
-	std::string pageSetup = props.GetString("print.margins");
-	char val[32] = "";
-	const char *ps = pageSetup.c_str();
-	const char *next = GetNextPropItem(ps, val, 32);
-	pagesetupMargin.left = atol(val);
-	next = GetNextPropItem(next, val, 32);
-	pagesetupMargin.right = atol(val);
-	next = GetNextPropItem(next, val, 32);
-	pagesetupMargin.top = atol(val);
-	GetNextPropItem(next, val, 32);
-	pagesetupMargin.bottom = atol(val);
+	std::vector<std::string> printMargins = StringSplit(
+		props.GetString("print.margins"), ',');
+	printMargins.resize(4); // Ensure indexing won't fail
+	pagesetupMargin.left = IntegerFromString(printMargins[0], 0);
+	pagesetupMargin.right = IntegerFromString(printMargins[1], 0);
+	pagesetupMargin.top = IntegerFromString(printMargins[2], 0);
+	pagesetupMargin.bottom = IntegerFromString(printMargins[3], 0);
 
 	UIAvailable();
 }
 
-static constexpr bool IsSpaceOrTab(GUI::gui_char ch) noexcept {
-	return (ch == ' ') || (ch == '\t');
+namespace {
+
+constexpr GUI::gui_string_view whiteSpace = GUI_TEXT("\t ");
+
+void RemoveInitialSpace(GUI::gui_string_view &s) noexcept {
+	while (!s.empty() && IsSpaceOrTab(s.front())) {
+		s.remove_prefix(1);
+	}
+}
+
 }
 
 /**
  * Break up the command line into individual arguments and strip double quotes
  * from each argument.
- * @return A string with each argument separated by '\n'.
+ * @return a vector of strings.
  */
-GUI::gui_string SciTEWin::ProcessArgs(const GUI::gui_char *cmdLine) {
-	GUI::gui_string args;
-	const GUI::gui_char *startArg = cmdLine;
-	while (*startArg) {
-		while (IsSpaceOrTab(*startArg)) {
-			startArg++;
-		}
-		const GUI::gui_char *endArg = startArg;
-		if (*startArg == '"') {	// Opening double-quote
-			startArg++;
-			endArg = startArg;
-			while (*endArg && *endArg != '\"') {
-				endArg++;
-			}
+std::vector<GUI::gui_string> SciTEWin::ProcessArgs(GUI::gui_string_view cmdLine) {
+	std::vector<GUI::gui_string> args;
+	GUI::gui_string_view cmds = cmdLine;
+	RemoveInitialSpace(cmds);
+	while (!cmds.empty()) {
+		size_t endArg = 0;
+		if (cmds.front() == '"') {	// Opening double-quote
+			cmds.remove_prefix(1);
+			endArg = cmds.find('"');
 		} else {	// No double-quote, end of argument on first space
-			while (*endArg && !IsSpaceOrTab(*endArg)) {
-				endArg++;
-			}
+			endArg = cmds.find_first_of(whiteSpace);
 		}
-		GUI::gui_string arg(startArg, 0, endArg - startArg);
-		if (args.size() > 0)
-			args += GUI_TEXT("\n");
-		args += arg;
-		startArg = endArg;	// On a space or a double-quote, or on the end of the command line
-		if (*startArg == '"') {	// Closing double-quote
-			startArg++;	// Consume the double-quote
+		GUI::gui_string_view arg = cmds;
+		if (endArg != GUI::gui_string_view::npos) {
+			// Reached end character
+			arg = cmds.substr(0, endArg);
+			cmds.remove_prefix(endArg+1);
+		} else {
+			// Ended at end of string without finding terminator
+			cmds.remove_prefix(cmds.length());
 		}
-		while (IsSpaceOrTab(*startArg)) {
-			// Consume spaces between arguments
-			startArg++;
-		}
+		args.emplace_back(arg);
+		// Consume spaces between arguments
+		RemoveInitialSpace(cmds);
 	}
 
 	return args;
@@ -1526,7 +1547,7 @@ void SciTEWin::Run(const GUI::gui_char *cmdLine) {
 	}
 
 	// Break up the command line into individual arguments
-	GUI::gui_string args = ProcessArgs(cmdLine);
+	const std::vector<GUI::gui_string> args = ProcessArgs(cmdLine);
 	// Read the command line parameters:
 	// In case the check.if.already.open property has been set or reset on the command line,
 	// we still get a last chance to force checking or to open a separate instance;
@@ -1684,21 +1705,21 @@ void SciTEWin::DropFiles(HDROP hdrop) {
 /**
  * Handle simple wild-card file patterns and directory requests.
  */
-bool SciTEWin::PreOpenCheck(const GUI::gui_char *arg) {
+bool SciTEWin::PreOpenCheck(const GUI::gui_string &file) {
 	bool isHandled = false;
 	HANDLE hFFile {};
 	WIN32_FIND_DATA ffile {};
-	const DWORD fileattributes = ::GetFileAttributes(arg);
+	const DWORD fileattributes = ::GetFileAttributes(file.c_str());
 	int nbuffers = props.GetInt("buffers");
-	FilePath fpArg(arg);
+	FilePath fpArg(file);
 
 	if (fileattributes != INVALID_FILE_ATTRIBUTES) {	// arg is an existing directory or filename
 		// if the command line argument is a directory, use OpenDialog()
 		if (fileattributes & FILE_ATTRIBUTE_DIRECTORY) {
-			OpenDialog(fpArg, GUI::StringFromUTF8(props.GetExpandedString("open.filter")).c_str());
+			OpenDialog(fpArg, GUI::StringFromUTF8(props.GetExpandedString("open.filter")));
 			isHandled = true;
 		}
-	} else if (nbuffers > 1 && (hFFile = ::FindFirstFile(arg, &ffile)) != INVALID_HANDLE_VALUE) {
+	} else if (nbuffers > 1 && (hFFile = ::FindFirstFile(file.c_str(), &ffile)) != INVALID_HANDLE_VALUE) {
 		// If several buffers is accepted and the arg is a filename pattern matching at least an existing file
 		isHandled = true;
 		FilePath fpDir = fpArg.Directory();
@@ -1724,7 +1745,7 @@ bool SciTEWin::PreOpenCheck(const GUI::gui_char *arg) {
 			wildcard += GUI_TEXT("|*");
 			wildcard += fpName.AsInternal();
 
-			OpenDialog(fpDir, wildcard.c_str());
+			OpenDialog(fpDir, wildcard);
 		} else if (!fpArg.Extension().IsSet()) {
 			// if the filename has no extension, try to match a file with list of standard extensions
 			std::string extensions = props.GetExpandedString("source.default.extensions");
@@ -1860,7 +1881,7 @@ void SciTEWin::ScaleChanged(WPARAM wParam, LPARAM lParam) {
 
 inline bool KeyMatch(const std::string &sKey, int keyval, int modifiers) {
 	return SciTEKeys::MatchKeyCode(
-		       SciTEKeys::ParseKeyCode(sKey.c_str()), keyval, modifiers);
+		       SciTEKeys::ParseKeyCode(sKey), keyval, modifiers);
 }
 
 LRESULT SciTEWin::KeyDown(WPARAM wParam) {
@@ -2201,7 +2222,7 @@ LRESULT ContentWin::WndProc(UINT iMessage, WPARAM wParam, LPARAM lParam) {
 			}
 
 		case WM_ERASEBKGND: {
-				RECT rc = {0, 0, 2000, 2000};
+				const RECT rc = {0, 0, 2000, 2000};
 				HBRUSH hbrFace = CreateSolidBrush(::GetSysColor(COLOR_3DFACE));
 				::FillRect(reinterpret_cast<HDC>(wParam), &rc, hbrFace);
 				::DeleteObject(hbrFace);
@@ -2256,11 +2277,11 @@ LRESULT ContentWin::WndProc(UINT iMessage, WPARAM wParam, LPARAM lParam) {
 
 // Convert String from UTF-8 to doc encoding
 std::string SciTEWin::EncodeString(const std::string &s) {
-	UINT codePageDocument = static_cast<UINT>(wEditor.CodePage());
+	UINT codePageDocument = wEditor.CodePage();
 
 	if (codePageDocument != SA::CpUtf8) {
 		codePageDocument = CodePageFromCharSet(characterSet, codePageDocument);
-		std::wstring sWide = StringDecode(std::string(s.c_str(), s.length()), CP_UTF8);
+		std::wstring sWide = StringDecode(s, CP_UTF8);
 		return StringEncode(sWide, codePageDocument);
 	}
 	return SciTEBase::EncodeString(s);
@@ -2268,13 +2289,13 @@ std::string SciTEWin::EncodeString(const std::string &s) {
 
 // Convert String from doc encoding to UTF-8
 std::string SciTEWin::GetRangeInUIEncoding(GUI::ScintillaWindow &win, SA::Span range) {
-	std::string s = SciTEBase::GetRangeInUIEncoding(win, range);
+	const std::string s = SciTEBase::GetRangeInUIEncoding(win, range);
 
 	UINT codePageDocument = wEditor.CodePage();
 
 	if (codePageDocument != SA::CpUtf8) {
 		codePageDocument = CodePageFromCharSet(characterSet, codePageDocument);
-		std::wstring sWide = StringDecode(std::string(s.c_str(), s.length()), codePageDocument);
+		std::wstring sWide = StringDecode(s, codePageDocument);
 		return StringEncode(sWide, CP_UTF8);
 	}
 	return s;
@@ -2309,21 +2330,20 @@ uintptr_t SciTEWin::EventLoop() {
 static void RestrictDLLPath() noexcept {
 	// Try to limit the locations where DLLs will be loaded from to prevent binary planting.
 	// That is where a bad DLL is placed in the current directory or in the PATH.
-	typedef BOOL(WINAPI *SetDefaultDllDirectoriesSig)(DWORD DirectoryFlags);
-	typedef BOOL(WINAPI *SetDllDirectorySig)(LPCTSTR lpPathName);
+	using SetDefaultDllDirectoriesSig = BOOL(WINAPI *)(DWORD DirectoryFlags);
+	using SetDllDirectorySig = BOOL(WINAPI *)(LPCTSTR lpPathName);
 	HMODULE kernel32 = ::GetModuleHandle(TEXT("kernel32.dll"));
 	if (kernel32) {
 		// SetDefaultDllDirectories is stronger, limiting search path to just the application and
 		// system directories but is only available on Windows 8+
 		SetDefaultDllDirectoriesSig SetDefaultDllDirectoriesFn =
-			reinterpret_cast<SetDefaultDllDirectoriesSig>(::GetProcAddress(
-						kernel32, "SetDefaultDllDirectories"));
+			DLLFunction<SetDefaultDllDirectoriesSig>(
+				kernel32, "SetDefaultDllDirectories");
 		if (SetDefaultDllDirectoriesFn) {
 			SetDefaultDllDirectoriesFn(LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
 		} else {
 			SetDllDirectorySig SetDllDirectoryFn =
-				reinterpret_cast<SetDllDirectorySig>(::GetProcAddress(
-							kernel32, "SetDllDirectoryW"));
+				DLLFunction<SetDllDirectorySig>(kernel32, "SetDllDirectoryW");
 			if (SetDllDirectoryFn) {
 				// For security, remove current directory from the DLL search path
 				SetDllDirectoryFn(TEXT(""));

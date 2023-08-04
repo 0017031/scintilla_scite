@@ -36,26 +36,30 @@ constexpr int StyleDefault = static_cast<int>(SA::StylesCommon::Default);
 struct SelectedRange {
 	SA::Position position;
 	SA::Position anchor;
-	SelectedRange(SA::Position position_= SA::InvalidPosition, SA::Position anchor_= SA::InvalidPosition) noexcept :
+	explicit SelectedRange(SA::Position position_= SA::InvalidPosition, SA::Position anchor_= SA::InvalidPosition) noexcept :
 		position(position_), anchor(anchor_) {
+	}
+};
+
+struct FilePosition {
+	SelectedRange selection;
+	SA::Line scrollPosition = 0;
+	FilePosition() = default;
+	FilePosition(SelectedRange selection_, SA::Line scrollPosition_) noexcept :
+		selection(selection_), scrollPosition(scrollPosition_) {
 	}
 };
 
 class RecentFile : public FilePath {
 public:
-	SelectedRange selection;
-	SA::Line scrollPosition;
-	RecentFile() {
-		scrollPosition = 0;
-	}
-	RecentFile(const FilePath &path_, SelectedRange selection_, SA::Line scrollPosition_) :
-		FilePath(path_), selection(selection_), scrollPosition(scrollPosition_) {
+	FilePosition filePosition;
+	RecentFile() = default;
+	RecentFile(const FilePath &path_, const FilePosition &filePosition_) :
+		FilePath(path_), filePosition(filePosition_) {
 	}
 	void Init() noexcept override {
 		FilePath::Init();
-		selection.position = SA::InvalidPosition;
-		selection.anchor = SA::InvalidPosition;
-		scrollPosition = 0;
+		filePosition = FilePosition();
 	}
 };
 
@@ -107,15 +111,10 @@ public:
 
 	void Init();
 
-	void SetTimeFromFile() {
-		fileModTime = file.ModifiedTime();
-		fileModLastAsk = fileModTime;
-		documentModTime = fileModTime;
-		failedSave = false;
-	}
+	void SetTimeFromFile();
 
 	void DocumentModified() noexcept;
-	bool NeedsSave(int delayBeforeSave) const;
+	bool NeedsSave(int delayBeforeSave) const noexcept;
 
 	void CompleteLoading() noexcept;
 	void CompleteStoring();
@@ -125,12 +124,11 @@ public:
 		return lifeState != LifeState::opened;
 	}
 
+	void ScheduleFinishSave() noexcept;
+	bool FinishSave() noexcept;
+
 	void CancelLoad();
 };
-
-inline constexpr Buffer::FutureDo operator&(Buffer::FutureDo a, Buffer::FutureDo b) noexcept {
-	return static_cast<Buffer::FutureDo>(static_cast<int>(a) & static_cast<int>(b));
-}
 
 struct BackgroundActivities {
 	int loaders;
@@ -140,44 +138,43 @@ struct BackgroundActivities {
 	GUI::gui_string fileNameLast;
 };
 
+using BufferIndex = int;
+constexpr BufferIndex bufferInvalid = -1;
+
 class BufferList {
 protected:
-	int current;
-	int stackcurrent;
-	std::vector<int> stack;
+	BufferIndex current;
+	BufferIndex stackcurrent;
+	std::vector<BufferIndex> stack;
 public:
 	std::vector<Buffer> buffers;
-	int length;
-	int lengthVisible;
+	BufferIndex length;
+	BufferIndex lengthVisible;
 	bool initialised;
 
 	BufferList();
-	int size() const noexcept {
-		return static_cast<int>(buffers.size());
-	}
-	void Allocate(int maxSize);
-	int Add();
-	int GetDocumentByWorker(const FileWorker *pFileWorker) const;
-	int GetDocumentByName(const FilePath &filename, bool excludeCurrent=false);
-	void RemoveInvisible(int index);
+	BufferIndex size() const noexcept;
+	void Allocate(BufferIndex maxSize);
+	BufferIndex Add();
+	BufferIndex GetDocumentByWorker(const FileWorker *pFileWorker) const noexcept;
+	BufferIndex GetDocumentByName(const FilePath &filename, bool excludeCurrent=false) const noexcept;
+	void RemoveInvisible(BufferIndex index);
 	void RemoveCurrent();
-	int Current() const noexcept;
-	Buffer *CurrentBuffer();
-	const Buffer *CurrentBufferConst() const;
-	void SetCurrent(int index) noexcept;
-	int StackNext();
-	int StackPrev();
+	BufferIndex Current() const noexcept;
+	Buffer *CurrentBuffer() noexcept;
+	const Buffer *CurrentBufferConst() const noexcept;
+	void SetCurrent(BufferIndex index) noexcept;
+	BufferIndex StackNext();
+	BufferIndex StackPrev();
 	void CommitStackSelection();
-	void MoveToStackTop(int index);
-	void ShiftTo(int indexFrom, int indexTo);
-	void Swap(int indexA, int indexB);
+	void MoveToStackTop(BufferIndex index);
+	void ShiftTo(BufferIndex indexFrom, BufferIndex indexTo);
+	void Swap(BufferIndex indexA, BufferIndex indexB);
 	bool SingleBuffer() const noexcept;
 	BackgroundActivities CountBackgroundActivities() const;
 	bool SavingInBackground() const;
-	bool GetVisible(int index) const noexcept;
-	void SetVisible(int index, bool visible);
-	void AddFuture(int index, Buffer::FutureDo fd);
-	void FinishedFuture(int index, Buffer::FutureDo fd);
+	bool GetVisible(BufferIndex index) const noexcept;
+	void SetVisible(BufferIndex index, bool visible);
 private:
 	void PopStack();
 };
@@ -222,13 +219,17 @@ enum class IndentationStatus {
 	keyWordStart	// Keywords that cause indentation
 };
 
-struct StyleAndWords {
-	int styleNumber;
-	std::string words;
-	StyleAndWords() noexcept : styleNumber(0) {
-	}
-	bool IsEmpty() const noexcept { return words.length() == 0; }
-	bool IsSingleChar() const noexcept { return words.length() == 1; }
+class StyleAndWords {
+	int styleNumber = 0;
+	std::set<std::string> words;
+public:
+	StyleAndWords() noexcept;
+	explicit StyleAndWords(const std::string &definition);
+	[[nodiscard]] bool IsEmpty() const noexcept;
+	[[nodiscard]] bool IsSingleChar() const noexcept;
+	[[nodiscard]] bool IsCharacter(char ch) const noexcept;
+	[[nodiscard]] int Style() const noexcept;
+	[[nodiscard]] bool Includes(const std::string &value) const;
 };
 
 struct CurrentWordHighlight {
@@ -282,6 +283,20 @@ struct SystemAppearance {
 
 // Titles appear different in menus and tabs
 enum class Title { menu, tab };
+
+enum class GrepFlags {
+	none = 0,
+	wholeWord = 1,
+	matchCase = 2,
+	stdOut = 4,
+	dot = 8,
+	binary = 16,
+	scroll = 32
+};
+
+constexpr GrepFlags operator|(GrepFlags a, GrepFlags b) noexcept {
+	return static_cast<GrepFlags>(static_cast<int>(a) | static_cast<int>(b));
+}
 
 class SciTEBase : public ExtensionAPI, public Searcher, public WorkerListener {
 protected:
@@ -431,8 +446,8 @@ protected:
 	std::string wordCharacters;
 	std::string whitespaceCharacters;
 	SA::Position startCalltipWord;
-	int currentCallTip;
-	int maxCallTips;
+	ptrdiff_t currentCallTip;
+	ptrdiff_t maxCallTips;
 	std::string currentCallTipWord;
 	SA::Position lastPosCallTip;
 
@@ -483,18 +498,18 @@ protected:
 	BufferList buffers;
 
 	// Handle buffers
-	void *GetDocumentAt(int index);
-	void SwitchDocumentAt(int index, void *pdoc);
+	void *GetDocumentAt(BufferIndex index);
+	void SwitchDocumentAt(BufferIndex index, void *pdoc);
 	void SaveFolds(std::vector<SA::Line> &folds);
 	void RestoreFolds(const std::vector<SA::Line> &folds);
 	void UpdateBuffersCurrent();
 	bool IsBufferAvailable() const noexcept;
 	bool CanMakeRoom(bool maySaveIfDirty = true);
-	void SetDocumentAt(int index, bool updateStack = true);
-	Buffer *CurrentBuffer() {
+	void SetDocumentAt(BufferIndex index, bool updateStack = true);
+	Buffer *CurrentBuffer() noexcept {
 		return buffers.CurrentBuffer();
 	}
-	const Buffer *CurrentBufferConst() const {
+	const Buffer *CurrentBufferConst() const noexcept {
 		return buffers.CurrentBufferConst();
 	}
 	void SetBuffersMenu();
@@ -509,7 +524,7 @@ protected:
 	virtual void TabInsert(int index, const GUI::gui_char *title) = 0;
 	virtual void TabSelect(int index) = 0;
 	virtual void RemoveAllTabs() = 0;
-	void ShiftTab(int indexFrom, int indexTo);
+	void ShiftTab(BufferIndex indexFrom, BufferIndex indexTo);
 	void MoveTabRight();
 	void MoveTabLeft();
 
@@ -565,7 +580,7 @@ protected:
 	std::string DiscoverLanguage();
 	void OpenCurrentFile(long long fileSize, bool suppressMessage, bool asynchronous);
 	virtual void OpenUriList(const char *) {}
-	virtual bool OpenDialog(const FilePath &directory, const GUI::gui_char *filesFilter) = 0;
+	virtual bool OpenDialog(const FilePath &directory, const GUI::gui_string &filesFilter) = 0;
 	virtual bool SaveAsDialog() = 0;
 	virtual void LoadSessionDialog() {}
 	virtual void SaveSessionDialog() {}
@@ -584,10 +599,11 @@ protected:
 	void PerformDeferredTasks();
 	enum class OpenCompletion { synchronous, completeCurrent, completeSwitch };
 	void CompleteOpen(OpenCompletion oc);
-	virtual bool PreOpenCheck(const GUI::gui_char *file);
+	virtual bool PreOpenCheck(const GUI::gui_string &file);
 	bool Open(const FilePath &file, OpenFlags of = ofNone);
 	bool OpenSelected();
 	void Revert();
+	std::string_view TextAsView();
 	FilePath SaveName(const char *ext) const;
 	enum SaveFlags {
 		sfNone = 0, 		// Default
@@ -630,7 +646,7 @@ protected:
 	FilePath GetLocalPropertiesFileName();
 	FilePath GetAbbrevPropertiesFileName();
 	void OpenProperties(int propsFile);
-	static int GetMenuCommandAsInt(std::string commandName);
+	static int GetMenuCommandAsInt(const std::string &commandName);
 	virtual void Print(bool) {}
 	virtual void PrintSetup() {}
 	void UserStripShow(const char * /* description */) override {}
@@ -641,7 +657,7 @@ protected:
 	SA::Span GetSelection();
 	SelectedRange GetSelectedRange();
 	void SetSelection(SA::Position anchor, SA::Position currentPos);
-	std::string GetCTag();
+	std::string GetCTag(GUI::ScintillaWindow *pw);
 	virtual std::string GetRangeInUIEncoding(GUI::ScintillaWindow &win, SA::Span span);
 	static std::string GetLine(GUI::ScintillaWindow &win, SA::Line line);
 	void RangeExtend(GUI::ScintillaWindow &wCurrent, SA::Span &range,
@@ -713,8 +729,8 @@ protected:
 	void GoMatchingBrace(bool select);
 	void GoMatchingPreprocCond(int direction, bool select);
 	virtual void FindReplace(bool replace) = 0;
-	void OutputAppendString(const char *s, SA::Position len = -1);
-	virtual void OutputAppendStringSynchronised(const char *s, SA::Position len = -1);
+	void OutputAppendString(std::string_view s);
+	virtual void OutputAppendStringSynchronised(std::string_view s);
 	virtual void Execute();
 	virtual void StopExecute() = 0;
 	void ShowMessages(SA::Line line);
@@ -751,8 +767,8 @@ protected:
 	SA::Line GetCurrentLineNumber();
 	SA::Position GetCurrentColumnNumber();
 	SA::Line GetCurrentScrollPosition();
-	virtual void AddCommand(const std::string &cmd, const std::string &dir,
-				JobSubsystem jobType, const std::string &input = "",
+	virtual void AddCommand(std::string_view cmd, std::string_view dir,
+				JobSubsystem jobType, std::string_view input = "",
 				int flags = 0);
 	virtual void AboutDialog() = 0;
 	virtual void QuitProgram() = 0;
@@ -817,15 +833,15 @@ protected:
 	bool AddFileToBuffer(const BufferState &bufferState);
 	void AddFileToStack(const RecentFile &file);
 	void RemoveFileFromStack(const FilePath &file);
-	RecentFile GetFilePosition();
-	void DisplayAround(const RecentFile &rf);
+	FilePosition GetFilePosition();
+	void DisplayAround(const FilePosition &rf);
 	void StackMenu(int pos);
 	void StackMenuNext();
 	void StackMenuPrev();
 
 	void RemoveToolsMenu();
 	void SetMenuItemLocalised(int menuNumber, int position, int itemID,
-				  const char *text, const char *mnemonic);
+				  std::string_view text, std::string_view mnemonic);
 	bool ToolIsImmediate(int item);
 	void SetToolsMenu();
 	JobSubsystem SubsystemType(const char *cmd);
@@ -848,7 +864,6 @@ protected:
 	StyleAndWords GetStyleAndWords(const char *base);
 	std::string ExtensionFileName() const;
 	void SetElementColour(SA::Element element, const char *key);
-	static const char *GetNextPropItem(const char *pStart, char *pPropItem, int maxLen);
 	void ForwardPropertyToEditor(const char *key);
 	struct MarkerAppearance {
 		SA::ColourAlpha fore;
@@ -862,12 +877,13 @@ protected:
 	void SetRepresentations();
 	virtual void ReadProperties();
 	void ReadEditorConfig(const std::string &fileNameForExtension);
-	std::string StyleString(const char *lang, int style) const;
 	StyleDefinition StyleDefinitionFor(int style);
-	void SetOneStyle(GUI::ScintillaWindow &win, int style, const StyleDefinition &sd);
+	void SetOneStyle(GUI::ScintillaWindow &win, int style, std::string_view definition);
 	void SetStyleBlock(GUI::ScintillaWindow &win, const char *lang, int start, int last);
 	void SetStyleFor(GUI::ScintillaWindow &win, const char *lang);
-	static void SetOneIndicator(GUI::ScintillaWindow &win, int indicator, const IndicatorDefinition &ind);
+	static void SetOneIndicator(GUI::ScintillaWindow &win, SA::IndicatorNumbers indicator, const IndicatorDefinition &ind);
+	void SetIndicatorFromProperty(GUI::ScintillaWindow &win, SA::IndicatorNumbers indicator, const std::string &propertyName);
+	void SetMarkerFromProperty(GUI::ScintillaWindow &win, int marker, const std::string &propertyName);
 	void ReloadProperties();
 
 	void CheckReload();
@@ -885,7 +901,7 @@ protected:
 
 	void SetHomeProperties();
 	void UIAvailable();
-	void PerformOne(char *action);
+	void PerformOne(std::string_view action);
 	void StartRecordMacro();
 	void StopRecordMacro();
 	void StartPlayMacro();
@@ -894,22 +910,19 @@ protected:
 	void AskMacroList();
 	bool StartMacroList(const char *words);
 	void ContinueMacroList(const char *stext);
-	bool ProcessCommandLine(const GUI::gui_string &args, int phase);
+	bool ProcessCommandLine(const std::vector<GUI::gui_string> &args, int phase);
 	virtual bool IsStdinBlocked();
 	void OpenFromStdin(bool UseOutputPane);
 	void OpenFilesFromStdin();
-	enum GrepFlags {
-		grepNone = 0, grepWholeWord = 1, grepMatchCase = 2, grepStdOut = 4,
-		grepDot = 8, grepBinary = 16, grepScroll = 32
-	};
 	virtual bool GrepIntoDirectory(const FilePath &directory);
-	void GrepRecursive(GrepFlags gf, const FilePath &baseDir, const char *searchString, const GUI::gui_char *fileTypes);
-	void InternalGrep(GrepFlags gf, const GUI::gui_char *directory, const GUI::gui_char *fileTypes,
-			  const char *search, SA::Position &originalEnd);
+	void GrepRecursive(GrepFlags gf, const FilePath &baseDir, const char *searchString,
+		GUI::gui_string_view fileTypes, GUI::gui_string_view excludedTypes);
+	void InternalGrep(GrepFlags gf, const FilePath &directory, GUI::gui_string_view fileTypes, GUI::gui_string_view excludedTypes,
+			  std::string_view search, SA::Position &originalEnd);
 	void EnumProperties(const char *propkind);
 	void SendOneProperty(const char *kind, const char *key, const char *val);
 	void PropertyFromDirector(const char *arg);
-	void PropertyToDirector(const char *arg);
+	void PropertyToDirector(std::string_view arg);
 	// ExtensionAPI
 	intptr_t Send(Pane p, SA::Message msg, uintptr_t wParam = 0, intptr_t lParam = 0) override;
 	std::string Range(Pane p, SA::Span range) override;
@@ -956,6 +969,7 @@ public:
 	virtual void WorkerCommand(int cmd, Worker *pWorker);
 };
 
+const char *LineEndString(SA::EndOfLine eolMode) noexcept;
 int ControlIDOfCommand(unsigned long) noexcept;
 SA::Colour ColourOfProperty(const PropSetFile &props, const char *key, SA::Colour colourDefault);
 SA::ColourAlpha ColourAlphaOfProperty(const PropSetFile &props, const char *key, SA::ColourAlpha colourDefault);

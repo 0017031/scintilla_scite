@@ -72,17 +72,17 @@ SIZE SizeButton(const GUI::Window &wButton) noexcept {
 	return sz;
 }
 
-SIZE SizeText(HFONT hfont, const GUI::gui_char *text) noexcept {
+SIZE SizeText(HFONT hfont, GUI::gui_string_view text) noexcept {
 	HDC hdcMeasure = ::CreateCompatibleDC({});
 	HFONT hfontOriginal = SelectFont(hdcMeasure, hfont);
 	RECT rcText = {0, 0, 2000, 2000};
-	::DrawText(hdcMeasure, text, -1, &rcText, DT_CALCRECT);
+	::DrawText(hdcMeasure, text.data(), static_cast<int>(text.length()), &rcText, DT_CALCRECT);
 	SelectFont(hdcMeasure, hfontOriginal);
 	::DeleteDC(hdcMeasure);
 	return SIZE{ rcText.right - rcText.left, rcText.bottom - rcText.top, };
 }
 
-int WidthText(HFONT hfont, const GUI::gui_char *text) noexcept {
+int WidthText(HFONT hfont, GUI::gui_string_view text) noexcept {
 	return SizeText(hfont, text).cx;
 }
 
@@ -105,10 +105,9 @@ std::string ComboSelectionText(GUI::Window w) {
 	const int selection = ComboBox_GetCurSel(combo);
 	if (selection != CB_ERR) {
 		const int len = ComboBox_GetLBTextLen(combo, selection);
-		GUI::gui_string itemText(len+1, L'\0');
-		const int lenActual = ComboBox_GetLBText(combo, selection, &itemText[0]);
+		GUI::gui_string itemText(len, L'\0');
+		const int lenActual = ComboBox_GetLBText(combo, selection, itemText.data());
 		if (lenActual != CB_ERR) {
-			itemText.pop_back(); // Remove NUL
 			return GUI::UTF8FromString(itemText);
 		}
 	}
@@ -169,8 +168,7 @@ LRESULT PASCAL BaseWin::StWndProc(
 namespace {
 
 constexpr RECT RECTFromRectangle(GUI::Rectangle r) noexcept {
-	RECT rc = { r.left, r.top, r.right, r.bottom };
-	return rc;
+	return { r.left, r.top, r.right, r.bottom };
 }
 
 struct Interval {
@@ -268,7 +266,7 @@ SearchOption toggles[] = {
 
 GUI::Window Strip::CreateText(const char *text) {
 	GUI::gui_string localised = localiser->Text(text);
-	const int width = WidthText(fontText, localised.c_str()) + 4;
+	const int width = WidthText(fontText, localised) + 4;
 	GUI::Window w;
 	w.SetID(::CreateWindowEx(0, TEXT("Static"), localised.c_str(),
 				 WS_CHILD | WS_CLIPSIBLINGS | SS_RIGHT,
@@ -281,7 +279,7 @@ GUI::Window Strip::CreateText(const char *text) {
 
 GUI::Window Strip::CreateButton(const char *text, size_t ident, bool check) {
 	GUI::gui_string localised = localiser->Text(text);
-	int width = WidthText(fontText, localised.c_str());
+	int width = WidthText(fontText, localised);
 	int height = 19 + 2 * ::GetSystemMetrics(SM_CYEDGE);
 	if (check) {
 		width += 6;
@@ -289,7 +287,7 @@ GUI::Window Strip::CreateButton(const char *text, size_t ident, bool check) {
 		width += checkSize;
 	} else {
 		width += 2 * ::GetSystemMetrics(SM_CXEDGE);	// Allow for 3D borders
-		width += 2 * WidthText(fontText, TEXT(" "));	// Allow a bit of space
+		width += 2 * WidthText(fontText, GUI_TEXT(" "));	// Allow a bit of space
 	}
 
 	int bmpDimension = 16;
@@ -363,7 +361,7 @@ GUI::Window Strip::CreateButton(const char *text, size_t ident, bool check) {
 	if (!check) {
 		const SIZE sz = SizeButton(w);
 		if (sz.cx > 0) {
-			const GUI::Rectangle rc(0, 0, sz.cx + 2 * WidthText(fontText, TEXT(" ")), sz.cy);
+			const GUI::Rectangle rc(0, 0, sz.cx + 2 * WidthText(fontText, GUI_TEXT(" ")), sz.cy);
 			w.SetPosition(rc);
 		}
 	}
@@ -661,7 +659,7 @@ LRESULT Strip::CustomDraw(NMHDR *pnmh) noexcept {
 
 		HDC hdcBM = ::CreateCompatibleDC({});
 		HBITMAP hbmOriginal = SelectBitmap(hdcBM, hBitmap);
-		::TransparentBlt(pcd->hdc, xOffset, yOffset,
+		::GdiTransparentBlt(pcd->hdc, xOffset, yOffset,
 				 rbmi.bmiHeader.biWidth, rbmi.bmiHeader.biHeight,
 				 hdcBM, 0, 0, rbmi.bmiHeader.biWidth, rbmi.bmiHeader.biHeight, colourTransparent);
 		SelectBitmap(hdcBM, hbmOriginal);
@@ -1062,14 +1060,14 @@ LRESULT FindReplaceStrip::EditColour(HWND hwnd, HDC hdc) noexcept {
 
 void FindReplaceStrip::SetFindFromSource(ChangingSource source) {
 	if (source == ChangingSource::edit) {
-		pSearcher->SetFindText(ControlText(wText).c_str());
+		pSearcher->SetFindText(ControlText(wText));
 	} else {
-		pSearcher->SetFindText(ComboSelectionText(wText).c_str());
+		pSearcher->SetFindText(ComboSelectionText(wText));
 	}
 }
 
 void FindReplaceStrip::NextIncremental(ChangingSource source) {
-	if (!pSearcher->filterState) {
+	if (performFilter && !pSearcher->filterState) {
 		pSearcher->FilterAll(false);
 	}
 	if ((incrementalBehaviour == IncrementalBehaviour::simple) && !pSearcher->filterState)
@@ -1104,8 +1102,10 @@ void FindReplaceStrip::MarkIncremental() {
 }
 
 void FindReplaceStrip::Close() {
-	pSearcher->filterState = false;
-	pSearcher->FilterAll(false);
+	if (pSearcher->filterState) {
+		pSearcher->filterState = false;
+		pSearcher->FilterAll(false);
+	}
 	if (pSearcher->havefound) {
 		pSearcher->InsertFindInMemory();
 	}
@@ -1368,7 +1368,7 @@ void ReplaceStrip::Size() {
 	Interval verticalCheck(rcLine.top, rcLine.bottom);
 
 	SetWindowPosition(wStaticFind, positions[0], Interval(rcLine.top + 3, rcLine.bottom));
-	SetWindowPosition(wText, positions[1], Interval(rcLine.top, 60));
+	SetWindowPosition(wText, positions[1], Interval(rcLine.top, rcLine.bottom + 60));
 	SetWindowPosition(wButtonFind, positions[2], verticalButton);
 	SetWindowPosition(wButtonReplaceAll, positions[3], verticalButton);
 	SetWindowPosition(wCheckWord, positions[4], verticalCheck);
@@ -1382,7 +1382,7 @@ void ReplaceStrip::Size() {
 	verticalCheck = Interval(rcLine.top, rcLine.bottom);
 
 	SetWindowPosition(wStaticReplace, positions[0], Interval(rcLine.top + 3, rcLine.bottom));
-	SetWindowPosition(wReplace, positions[1], Interval(rcLine.top, 60));
+	SetWindowPosition(wReplace, positions[1], Interval(rcLine.top, rcLine.bottom + 60));
 	SetWindowPosition(wButtonReplace, positions[2], verticalButton);
 	SetWindowPosition(wButtonReplaceInSelection, positions[3], verticalButton);
 	SetWindowPosition(wCheckRE, positions[4], verticalCheck);
@@ -1447,7 +1447,6 @@ void ReplaceStrip::HandleReplaceCommand(int cmd, bool reverseFind) {
 		SetComboFromMemory(wReplace, pSearcher->memReplaces);
 		SetComboText(wReplace, pSearcher->replaceWhat, ComboSelection::atEnd);
 	}
-	//int replacements = 0;
 	if (cmd == IDOK) {
 		if (pSearcher->FindHasText()) {
 			pSearcher->FindNext(reverseFind);
@@ -1456,13 +1455,9 @@ void ReplaceStrip::HandleReplaceCommand(int cmd, bool reverseFind) {
 		pSearcher->ReplaceOnce(incrementalBehaviour == IncrementalBehaviour::simple);
 		NextIncremental(ChangingSource::edit);	// Show not found colour if no more matches.
 	} else if ((cmd == IDREPLACEALL) || (cmd == IDREPLACEINSEL)) {
-		//~ replacements = pSciTEWin->ReplaceAll(cmd == IDREPLACEINSEL);
 		pSearcher->ReplaceAll(cmd == IDREPLACEINSEL);
 		NextIncremental(ChangingSource::edit);	// Show not found colour if no more matches.
 	}
-
-	//GUI::gui_string replDone = GUI::StringFromInteger(replacements);
-	//dlg.SetItemText(IDREPLDONE, replDone.c_str());
 }
 
 bool ReplaceStrip::Command(WPARAM wParam) {
@@ -1589,7 +1584,6 @@ void FilterStrip::Size() {
 	GUI::Rectangle rcArea = LineArea(0);
 	rcArea.left += space;
 
-	const Interval verticalButton(rcArea.top - 1, rcArea.bottom);
 	const Interval verticalCheck(rcArea.top, rcArea.bottom);
 
 	const int checkWidth = rcArea.Height() - 1;	// Using height to make square
@@ -1755,7 +1749,7 @@ void UserStrip::Size() {
 			if (ctl.controlType == UserControl::ucButton) {
 				const SIZE sz = SizeButton(ctl.w);
 				if (sz.cx > 0) {
-					ctl.widthDesired = sz.cx + 2 * WidthText(fontText, TEXT(" "));
+					ctl.widthDesired = sz.cx + 2 * WidthText(fontText, GUI_TEXT(" "));
 				}
 			}
 		}
@@ -1918,9 +1912,9 @@ void UserStrip::SetDescription(const char *description) {
 
 			case UserControl::ucButton:
 			case UserControl::ucDefaultButton:
-				ctl.widthDesired = WidthText(fontText, ctl.text.c_str()) +
+				ctl.widthDesired = WidthText(fontText, ctl.text) +
 						   2 * ::GetSystemMetrics(SM_CXEDGE) +
-						   2 * WidthText(fontText, TEXT(" "));
+						   2 * WidthText(fontText, GUI_TEXT(" "));
 				ctl.w = ::CreateWindowEx(0, TEXT("Button"), ctl.text.c_str(),
 							 WS_CHILD | WS_TABSTOP | WS_CLIPSIBLINGS |
 							 ((ctl.controlType == UserControl::ucDefaultButton) ? BS_DEFPUSHBUTTON : BS_PUSHBUTTON),
@@ -1929,7 +1923,7 @@ void UserStrip::SetDescription(const char *description) {
 				break;
 
 			default:
-				ctl.widthDesired = WidthText(fontText, ctl.text.c_str());
+				ctl.widthDesired = WidthText(fontText, ctl.text);
 				ctl.w = ::CreateWindowEx(0, TEXT("Static"), ctl.text.c_str(),
 							 WS_CHILD | WS_CLIPSIBLINGS | ES_RIGHT,
 							 left, top, ctl.widthDesired, lineHeight - 5,
@@ -1957,7 +1951,7 @@ void UserStrip::SetSciTE(SciTEWin *pSciTEWin_) noexcept {
 	pSciTEWin = pSciTEWin_;
 }
 
-UserControl *UserStrip::FindControl(int control) {
+UserControl *UserStrip::FindControl(int control) noexcept {
 	return psd->FindControl(control);
 }
 

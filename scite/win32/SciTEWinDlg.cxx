@@ -6,11 +6,14 @@
 // The License.txt file describes the conditions under which this software may be distributed.
 
 #include "SciTEWin.h"
+#include "DLLFunction.h"
+
+namespace {
 
 /**
  * Flash the given window for the asked @a duration to visually warn the user.
  */
-static void FlashThisWindow(
+void FlashThisWindow(
 	HWND hWnd,    		///< Window to flash handle.
 	int duration) noexcept {	///< Duration of the flash state.
 
@@ -28,7 +31,7 @@ static void FlashThisWindow(
 /**
  * Play the given sound, loading if needed the corresponding DLL function.
  */
-static void PlayThisSound(
+void PlayThisSound(
 	const char *sound,    	///< Path to a .wav file or string with a frequency value.
 	int duration,    		///< If @a sound is a frequency, gives the duration of the sound.
 	HMODULE &hMM) noexcept {		///< Multimedia DLL handle.
@@ -46,8 +49,8 @@ static void PlayThisSound(
 		}
 
 		if (hMM) {
-			typedef BOOL (WINAPI *MMFn)(LPCSTR, HMODULE, DWORD);
-			MMFn fnMM = reinterpret_cast<MMFn>(::GetProcAddress(hMM, "PlaySoundA"));
+			using MMFn = BOOL(WINAPI *)(LPCSTR, HMODULE, DWORD);
+			MMFn fnMM = DLLFunction<MMFn>(hMM, "PlaySoundA");
 			if (fnMM) {
 				bPlayOK = fnMM(sound, NULL, SND_ASYNC | SND_FILENAME);
 			}
@@ -71,18 +74,17 @@ static void PlayThisSound(
 	}
 }
 
-static SciTEWin *Caller(HWND hDlg, UINT message, LPARAM lParam) noexcept {
+SciTEWin *Caller(HWND hDlg, UINT message, LPARAM lParam) noexcept {
 	if (message == WM_INITDIALOG) {
 		::SetWindowLongPtr(hDlg, DWLP_USER, lParam);
 	}
 	return reinterpret_cast<SciTEWin *>(::GetWindowLongPtr(hDlg, DWLP_USER));
 }
 
+}
+
 void SciTEWin::WarnUser(int warnID) {
 	std::string warning;
-	char flashDuration[10] = "";
-	char sound[_MAX_PATH] = "";
-	char soundDuration[10] = "";
 
 	switch (warnID) {
 	case warnFindWrapped:
@@ -107,16 +109,25 @@ void SciTEWin::WarnUser(int warnID) {
 		warning = "";
 		break;
 	}
-	const char *warn = warning.c_str();
-	const char *next = GetNextPropItem(warn, flashDuration, 10);
-	next = GetNextPropItem(next, sound, _MAX_PATH);
-	GetNextPropItem(next, soundDuration, 10);
 
-	const int flashLen = atoi(flashDuration);
+	const std::vector<std::string> warningFields = StringSplit(warning, ',');
+	int duration = 0;
+	if (warningFields.size() > 2) {
+		duration = IntegerFromString(warningFields[2], 0);
+	}
+	std::string sound;
+	if (warningFields.size() > 1) {
+		sound = warningFields[1];
+	}
+	int flashLen = 0;
+	if (warningFields.size() > 0) {
+		flashLen = IntegerFromString(warningFields[0], 0);
+	}
+
 	if (flashLen) {
 		FlashThisWindow(HwndOf(wEditor), flashLen);
 	}
-	PlayThisSound(sound, atoi(soundDuration), hMM);
+	PlayThisSound(sound.c_str(), duration, hMM);
 }
 
 bool SciTEWin::DialogHandled(GUI::WindowID id, MSG *pmsg) noexcept {
@@ -185,7 +196,7 @@ int SciTEWin::DoDialog(const TCHAR *resName, DLGPROC lpProc) {
 	return result;
 }
 
-HWND SciTEWin::CreateParameterisedDialog(LPCWSTR lpTemplateName, DLGPROC lpProc) {
+HWND SciTEWin::CreateParameterisedDialog(LPCWSTR lpTemplateName, DLGPROC lpProc) noexcept {
 	return ::CreateDialogParamW(hInstance,
 				    lpTemplateName,
 				    MainHWND(),
@@ -193,29 +204,29 @@ HWND SciTEWin::CreateParameterisedDialog(LPCWSTR lpTemplateName, DLGPROC lpProc)
 				    reinterpret_cast<LPARAM>(this));
 }
 
-GUI::gui_string SciTEWin::DialogFilterFromProperty(const GUI::gui_char *filterProperty) {
-	GUI::gui_string filterText = filterProperty;
-	if (filterText.length()) {
-		std::replace(filterText.begin(), filterText.end(), '|', '\0');
-		size_t start = 0;
-		while (start < filterText.length()) {
-			const GUI::gui_char *filterName = filterText.c_str() + start;
-			if (*filterName == '#') {
-				size_t next = start + wcslen(filterText.c_str() + start) + 1;
-				next += wcslen(filterText.c_str() + next) + 1;
-				filterText.erase(start, next - start);
-			} else {
-				GUI::gui_string localised = localiser.Text(GUI::UTF8FromString(filterName).c_str(), false);
+GUI::gui_string SciTEWin::DialogFilterFromProperty(const GUI::gui_string &filterProperty) {
+	std::vector<GUI::gui_string> transformed;
+	if (filterProperty.length()) {
+		const std::vector<GUI::gui_string> filters = StringSplit(filterProperty, GUI_TEXT('|'));
+		for (size_t i = 0; i < filters.size()-1; i+=2) {
+			if (!StartsWith(filters[i], GUI_TEXT("#"))) {
+				const GUI::gui_string localised = localiser.Text(GUI::UTF8FromString(filters[i]), false);
 				if (localised.size()) {
-					filterText.erase(start, wcslen(filterName));
-					filterText.insert(start, localised);
+					transformed.push_back(localised);
+				} else {
+					transformed.push_back(filters[i]);
 				}
-				start += wcslen(filterText.c_str() + start) + 1;
-				start += wcslen(filterText.c_str() + start) + 1;
+				transformed.push_back(filters[i+1]);
 			}
 		}
 	}
-	return filterText;
+	GUI::gui_string filterString;
+	for (const GUI::gui_string &s : transformed) {
+		filterString.append(s);
+		filterString.append(1, GUI_TEXT('\0'));
+	}
+	filterString.append(1, GUI_TEXT('\0'));	// Ensure double terminated
+	return filterString;
 }
 
 void SciTEWin::CheckCommonDialogError() {
@@ -227,7 +238,7 @@ void SciTEWin::CheckCommonDialogError() {
 	}
 }
 
-bool SciTEWin::OpenDialog(const FilePath &directory, const GUI::gui_char *filesFilter) {
+bool SciTEWin::OpenDialog(const FilePath &directory, const GUI::gui_string &filesFilter) {
 	enum {maxBufferSize=2048};
 
 	DWORD filterDefault = 1;
@@ -276,7 +287,9 @@ bool SciTEWin::OpenDialog(const FilePath &directory, const GUI::gui_char *filesF
 	}
 	if (::GetOpenFileNameW(&ofn)) {
 		succeeded = true;
-		openFilterDefault = filters[(ofn.nFilterIndex-1)*2];
+		if (!filters.empty()) {
+			openFilterDefault = filters[(ofn.nFilterIndex - 1) * 2];
+		}
 		// if single selection then have path+file
 		if (wcslen(openName) > static_cast<size_t>(ofn.nFileOffset)) {
 			Open(openName);
@@ -300,7 +313,7 @@ FilePath SciTEWin::ChooseSaveName(const FilePath &directory, const char *title, 
 	FilePath path;
 	if (0 == dialogsOnScreen) {
 		GUI::gui_char saveName[MAX_PATH] = GUI_TEXT("");
-		FilePath savePath = SaveName(ext);
+		const FilePath savePath = SaveName(ext);
 		if (!savePath.IsUntitled()) {
 			StringCopy(saveName, savePath.AsInternal());
 		}
@@ -329,7 +342,7 @@ FilePath SciTEWin::ChooseSaveName(const FilePath &directory, const char *title, 
 
 bool SciTEWin::SaveAsDialog() {
 	GUI::gui_string saveFilter = DialogFilterFromProperty(
-					     GUI::StringFromUTF8(props.GetExpandedString("save.filter")).c_str());
+					     GUI::StringFromUTF8(props.GetExpandedString("save.filter")));
 	FilePath path = ChooseSaveName(filePath.Directory(), "Save File", saveFilter.c_str());
 	if (path.IsSet()) {
 		return SaveIfNotOpen(path, false);
@@ -456,14 +469,9 @@ void SciTEWin::Print(
 	pdlg.hDevMode = hDevMode;
 	pdlg.hDevNames = hDevNames;
 
-	// This code will not work for documents > 2GB
-
 	// See if a range has been selected
 	const SA::Span rangeSelection = GetSelection();
-	const LONG startPos = static_cast<LONG>(rangeSelection.start);
-	const LONG endPos = static_cast<LONG>(rangeSelection.end);
-
-	if (startPos == endPos) {
+	if (rangeSelection.start == rangeSelection.end) {
 		pdlg.Flags |= PD_NOSELECTION;
 	} else {
 		pdlg.Flags |= PD_SELECTION;
@@ -566,7 +574,7 @@ void SciTEWin::Print(
 	TEXTMETRIC tm {};
 
 	std::string headerStyle = props.GetString("print.header.style");
-	StyleDefinition sdHeader(headerStyle.c_str());
+	StyleDefinition sdHeader(headerStyle);
 
 	int headerLineHeight = ::MulDiv(
 				       (sdHeader.specified & StyleDefinition::sdSize) ? sdHeader.size : 9,
@@ -584,7 +592,7 @@ void SciTEWin::Print(
 	headerLineHeight = tm.tmHeight + tm.tmExternalLeading;
 
 	std::string footerStyle = props.GetString("print.footer.style");
-	StyleDefinition sdFooter(footerStyle.c_str());
+	StyleDefinition sdFooter(footerStyle);
 
 	int footerLineHeight = ::MulDiv(
 				       (sdFooter.specified & StyleDefinition::sdSize) ? sdFooter.size : 9,
@@ -616,28 +624,16 @@ void SciTEWin::Print(
 		return;
 	}
 
-	LONG lengthDoc = static_cast<LONG>(wEditor.Length());
-	const LONG lengthDocMax = lengthDoc;
-	LONG lengthPrinted = 0;
+	const SA::Position lengthDocMax = wEditor.Length();
+	// PD_SELECTION -> requested to print selection.
+	const SA::Position lengthDoc = (pdlg.Flags & PD_SELECTION) ? rangeSelection.end : lengthDocMax;
+	SA::Position lengthPrinted = (pdlg.Flags & PD_SELECTION) ? rangeSelection.start : 0;
 
-	// Requested to print selection
-	if (pdlg.Flags & PD_SELECTION) {
-		if (startPos > endPos) {
-			lengthPrinted = endPos;
-			lengthDoc = startPos;
-		} else {
-			lengthPrinted = startPos;
-			lengthDoc = endPos;
-		}
-
-		if (lengthPrinted < 0)
-			lengthPrinted = 0;
-		if (lengthDoc > lengthDocMax)
-			lengthDoc = lengthDocMax;
-	}
+	assert(lengthPrinted >= 0);
+	assert(lengthDoc <= lengthDocMax);
 
 	// We must subtract the physical margins from the printable area
-	Sci_RangeToFormat frPrint {};
+	SA::RangeToFormatFull frPrint {};
 	frPrint.hdc = hdc;
 	frPrint.hdcTarget = hdc;
 	frPrint.rc.left = rectMargins.left - rectPhysMargins.left;
@@ -664,8 +660,7 @@ void SciTEWin::Print(
 		const bool printPage = (!(pdlg.Flags & PD_PAGENUMS) ||
 					((pageNum >= pdlg.nFromPage) && (pageNum <= pdlg.nToPage)));
 
-		char pageString[32];
-		sprintf(pageString, "%0d", pageNum);
+		const std::string pageString = std::to_string(pageNum);
 		propsPrint.Set("CurrentPage", pageString);
 
 		if (printPage) {
@@ -697,7 +692,7 @@ void SciTEWin::Print(
 		frPrint.chrg.cpMin = lengthPrinted;
 		frPrint.chrg.cpMax = lengthDoc;
 
-		lengthPrinted = static_cast<LONG>(wEditor.FormatRange(printPage, &frPrint));
+		lengthPrinted = wEditor.FormatRangeFull(printPage, &frPrint);
 
 		if (printPage) {
 			if (footerFormat.size()) {
@@ -706,7 +701,7 @@ void SciTEWin::Print(
 				::SetBkColor(hdc, sdFooter.Back());
 				::SelectObject(hdc, fontFooter);
 				const UINT ta = ::SetTextAlign(hdc, TA_TOP);
-				RECT rcw = {frPrint.rc.left, frPrint.rc.bottom + footerLineHeight / 2,
+				const RECT rcw = {frPrint.rc.left, frPrint.rc.bottom + footerLineHeight / 2,
 					    frPrint.rc.right, frPrint.rc.bottom + footerLineHeight + footerLineHeight / 2
 					   };
 				::ExtTextOutW(hdc, frPrint.rc.left + 5, frPrint.rc.bottom + footerLineHeight / 2,
@@ -790,12 +785,8 @@ public:
 		return TextOfWindow(Item(id));
 	}
 
-	void SetItemText(int id, const GUI::gui_char *s) noexcept {
-		::SetDlgItemTextW(hDlg, id, s);
-	}
-
 	void SetItemText(int id, const GUI::gui_string &s) noexcept {
-		SetItemText(id, s.c_str());
+		::SetDlgItemTextW(hDlg, id, s.c_str());
 	}
 
 	// Handle Unicode controls (assume strings to be UTF-8 on Windows NT)
@@ -839,7 +830,7 @@ public:
 
 };
 
-static void FillComboFromProps(HWND combo, PropSetFile &props) {
+static void FillComboFromProps(HWND combo, const PropSetFile &props) {
 	const char *key = nullptr;
 	const char *val = nullptr;
 	if (props.GetFirst(key, val)) {
@@ -919,7 +910,7 @@ void DialogFindReplace::GrabFields() {
 	pSearcher->contextVisible = Checked(IDCONTEXTVISIBLE);
 	if (advanced) {
 		pSearcher->findInStyle = Checked(IDFINDINSTYLE);
-		pSearcher->findStyle = atoi(ItemTextU(IDFINDSTYLE).c_str());
+		pSearcher->findStyle = IntegerFromString(ItemTextU(IDFINDSTYLE), 0);
 	}
 }
 
@@ -1213,6 +1204,8 @@ void SciTEWin::PerformGrep() {
 		searchParams.append("\0", 1);
 		searchParams.append(props.GetString("find.files"));
 		searchParams.append("\0", 1);
+		searchParams.append(props.GetString("find.exclude"));
+		searchParams.append("\0", 1);
 		searchParams.append(props.GetString("find.what"));
 		AddCommand(searchParams, props.GetString("find.directory"), JobSubsystem::grep, findInput, flags);
 	} else {
@@ -1270,15 +1263,15 @@ BOOL SciTEWin::GrepMessage(HWND hDlg, UINT message, WPARAM wParam) {
 				return FALSE;
 			}
 			findWhat = dlg.ItemTextU(IDFINDWHAT);
-			props.Set("find.what", findWhat.c_str());
+			props.Set("find.what", findWhat);
 			InsertFindInMemory();
 
 			std::string files = dlg.ItemTextU(IDFILES);
-			props.Set("find.files", files.c_str());
+			props.Set("find.files", files);
 			memFiles.Insert(files);
 
 			std::string directory = dlg.ItemTextU(IDDIRECTORY);
-			props.Set("find.directory", directory.c_str());
+			props.Set("find.directory", directory);
 			memDirectory.Insert(directory);
 
 			wholeWord = dlg.Checked(IDWHOLEWORD);
@@ -1366,14 +1359,13 @@ void SciTEWin::FindInFiles() {
 		::SetFocus(hDlg);
 		return;
 	}
-	props.Set("find.what", findWhat.c_str());
+	props.Set("find.what", findWhat);
 
 	std::string directory = props.GetString("find.in.directory");
 	if (directory.length()) {
-		props.Set("find.directory", directory.c_str());
+		props.Set("find.directory", directory);
 	} else {
-		FilePath findInDir = filePath.Directory();
-		props.Set("find.directory", findInDir.AsUTF8().c_str());
+		props.SetPath("find.directory", filePath.Directory());
 	}
 	wFindInFiles = CreateParameterisedDialog(TEXT("Grep"), GrepDlg);
 	wFindInFiles.Show();
@@ -1604,9 +1596,9 @@ void SciTEWin::ParamGrab() {
 		HWND hDlg = HwndOf(wParameters);
 		Dialog dlg(hDlg);
 		for (int param = 0; param < maxParam; param++) {
-			std::string paramVal = GUI::UTF8FromString(dlg.ItemTextG(IDPARAMSTART + param));
-			std::string paramText = StdStringFromInteger(param + 1);
-			props.Set(paramText.c_str(), paramVal.c_str());
+			const std::string paramVal = GUI::UTF8FromString(dlg.ItemTextG(IDPARAMSTART + param));
+			const std::string paramText = StdStringFromInteger(param + 1);
+			props.Set(paramText, paramVal);
 		}
 		UpdateStatusBar(true);
 	}
@@ -1620,14 +1612,14 @@ BOOL SciTEWin::ParametersMessage(HWND hDlg, UINT message, WPARAM wParam) {
 			wParameters = hDlg;
 			Dialog dlg(hDlg);
 			if (modalParameters) {
-				GUI::gui_string sCommand = GUI::StringFromUTF8(parameterisedCommand);
-				dlg.SetItemText(IDCMD, sCommand.c_str());
+				const GUI::gui_string sCommand = GUI::StringFromUTF8(parameterisedCommand);
+				dlg.SetItemText(IDCMD, sCommand);
 			}
 			for (int param = 0; param < maxParam; param++) {
 				std::string paramText = StdStringFromInteger(param + 1);
-				std::string paramTextVal = props.GetString(paramText.c_str());
-				GUI::gui_string sVal = GUI::StringFromUTF8(paramTextVal);
-				dlg.SetItemText(IDPARAMSTART + param, sVal.c_str());
+				std::string paramTextVal = props.GetString(paramText);
+				const GUI::gui_string sVal = GUI::StringFromUTF8(paramTextVal);
+				dlg.SetItemText(IDPARAMSTART + param, sVal);
 			}
 		}
 		return TRUE;

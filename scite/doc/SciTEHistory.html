@@ -577,6 +577,29 @@
 	<td>feitoi</td>
 	<td>vsl7</td>
       </tr><tr>
+	<td>Antonio Cebrián</td>
+	<td>Jan Dolinár</td>
+	<td>Rowan Daniell</td>
+	<td>David Yu Yang</td>
+      </tr><tr>
+	<td>Arkadiusz Michalski</td>
+	<td>Christian Schmitz</td>
+	<td>Red_M</td>
+	<td>j-camp</td>
+      </tr><tr>
+	<td>Michael Berlenz</td>
+	<td>cdbdev</td>
+	<td>Andrey Smolyakov</td>
+	<td>Knut Leimbert</td>
+      </tr><tr>
+	<td>Scharfe Andre</td>
+	<td>Jacky Yang</td>
+	<td>German Aizek</td>
+	<td>Reinhard Nißl</td>
+      </tr><tr>
+	<td>Ferdinand Oeinck</td>
+	<td>Chengzhi Li</td>
+	<td>James Gaskell</td>
       </tr>
     </table>
     <p>
@@ -586,13 +609,1254 @@
     </p>
     <h2>Releases</h2>
     <h3>
+       <a href="https://www.scintilla.org/scite537.zip">Release 5.3.7</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 26 July 2023.
+		</li>
+		<li>
+		Add discover.properties property to enable command.discover.properties which is now disabled by
+		default as a security measure since command.discover.properties may perform any command silently and
+		automatically and can be set in local properties for a shared directory or downloaded project.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2387/">Bug #2387</a>.
+		</li>
+		<li>
+		Add ZoomFactor property that may be displayed in status bar.
+		</li>
+		<li>
+		Remove nimrod.properties file as it has been superseded by nim.properties.
+		</li>
+	</ul>
+	<li>Lexilla 5.2.6</li>
+	<ul>
+		<li>
+		Include empty word list names in value returned by DescribeWordListSets and SCI_DESCRIBEKEYWORDSETS.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/175">Issue #175</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/176">Pull request #176</a>.
+		</li>
+		<li>
+		Bash: style here-doc end delimiters as SCE_SH_HERE_DELIM instead of SCE_SH_HERE_Q.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/177">Issue #177</a>.
+		</li>
+		<li>
+		Bash: allow '$' as last character in string.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/180">Issue #180</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/181">Pull request #181</a>.
+		</li>
+		<li>
+		Bash: fix state after expansion. Highlight all numeric and file test operators.
+		Don't highlight dash in long option as operator.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/182">Issue #182</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/183">Pull request #183</a>.
+		</li>
+		<li>
+		Bash: strict checking of special parameters ($*, $@, $$, ...) with property lexer.bash.special.parameter to specify
+		valid parameters.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/184">Issue #184</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/186">Pull request #186</a>.
+		</li>
+		<li>
+		Bash: recognize keyword before redirection operators (&lt; and &gt;).
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/188">Issue #188</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/189">Pull request #189</a>.
+		</li>
+		<li>
+		Errorlist: recognize Bash diagnostic messages.
+		</li>
+		<li>
+		HTML: allow ASP block to terminate inside line comment.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/185">Issue #185</a>.
+		</li>
+		<li>
+		HTML: fix folding with JSP/ASP.NET &lt;%-- comment.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/191">Issue #191</a>.
+		</li>
+		<li>
+		HTML: fix incremental styling of multi-line ASP.NET directive.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/191">Issue #191</a>.
+		</li>
+		<li>
+		Matlab: improve arguments blocks.
+		Add support for multiple arguments blocks.
+		Prevent "arguments" from being keyword in function declaration line.
+		Fix semicolon handling.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/179">Pull request #179</a>.
+		</li>
+		<li>
+		Visual Prolog: add support for embedded syntax with SCE_VISUALPROLOG_EMBEDDED
+		and SCE_VISUALPROLOG_PLACEHOLDER.<br />
+		Styling of string literals changed with no differentiation between literals with quotes and those
+		that are prefixed with "@".
+		Quote characters are in a separate style (SCE_VISUALPROLOG_STRING_QUOTE)
+		to contents (SCE_VISUALPROLOG_STRING).<br />
+		SCE_VISUALPROLOG_CHARACTER, SCE_VISUALPROLOG_CHARACTER_TOO_MANY,
+		SCE_VISUALPROLOG_CHARACTER_ESCAPE_ERROR, SCE_VISUALPROLOG_STRING_EOL_OPEN,
+		and SCE_VISUALPROLOG_STRING_VERBATIM_SPECIAL were removed (replaced with
+		SCE_VISUALPROLOG_UNUSED[1-5]).
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/178">Pull request #178</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.3.6</li>
+	<ul>
+		<li>
+		Redraw calltip after showing as didn't update when size of new text exactly same as
+		previous.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1486/">Feature #1486</a>.
+		</li>
+		<li>
+		On Win32 fix reverse arrow cursor when scaled.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2382/">Bug #2382</a>.
+		</li>
+		<li>
+		On Win32 hide cursor when typing if that system preference has been chosen.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2333/">Bug #2333</a>.
+		</li>
+		<li>
+		On Win32 and Qt, stop aligning IME candidate window to target.
+		It is now always aligned to start of composition string.
+		This undoes part of feature #1300.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1488/">Feature #1488</a>,
+		<a href="https://sourceforge.net/p/scintilla/bugs/2391/">Bug #2391</a>,
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1300/">Feature #1300</a>.
+		</li>
+		<li>
+		On Qt, for IMEs, update micro focus when selection changes.
+		This may move the location of IME popups to align with the caret.
+		</li>
+		<li>
+		On Qt, implement replacement for IMEs which may help with actions like reconversion.
+		This is similar to delete-surrounding on GTK.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite536.zip">Release 5.3.6</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 31 May 2023.
+		</li>
+		<li>
+		Add properties file for Hollywood programming language.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1483/">Feature #1483.</a>
+		</li>
+		<li>
+		Fix F-key bindings with &lt;control&gt; by handling them explicitly in global key
+		handler. They were being ignored on GTK 3.x.
+		</li>
+		<li>
+		Fix autocomplete.&lt;language&gt;.ignorecase to work again.
+		</li>
+	</ul>
+	<li>Lexilla 5.2.5</li>
+	<ul>
+		<li>
+		Add CharacterSetArray constructor without setBase initial argument for common case
+		where this is setNone and the initialSet argument completely defines the characters.
+		This shortens and clarifies use of CharacterSetArray.
+		</li>
+		<li>
+		Bash: implement highlighting inside quoted elements and here-docs.
+		Controlled with properties lexer.bash.styling.inside.string, lexer.bash.styling.inside.backticks,
+		lexer.bash.styling.inside.parameter, and lexer.bash.styling.inside.heredoc.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/154">Issue #154</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/153">Issue #153</a>,
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1033/">Feature #1033</a>.
+		</li>
+		<li>
+		Bash: add property lexer.bash.command.substitution to choose how to style command substitutions.
+		0 &rarr; SCE_SH_BACKTICKS;
+		1 &rarr; surrounding "$(" and ")" as operators and contents styled as bash code;
+		2 &rarr; use distinct styles (base style + 64) for contents.
+		Choice (2) is a provisional feature and details may change before it is finalized.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/153">Issue #153</a>.
+		</li>
+		<li>
+		Bash: fix nesting of parameters (SCE_SH_PARAM) like ${var/$sub/"${rep}}"}.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/154">Issue #154</a>.
+		</li>
+		<li>
+		Bash: fix single character special parameters like $? by limiting style.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/154">Issue #154</a>.
+		</li>
+		<li>
+		Bash: treat "$$" as special parameter and end scalars before "$".
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/154">Issue #154</a>.
+		</li>
+		<li>
+		Bash: treat "&lt;&lt;" in arithmetic contexts as left bitwise shift operator instead of here-doc.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/137">Issue #137</a>.
+		</li>
+		<li>
+		Batch: style SCE_BAT_AFTER_LABEL used for rest of line after label which is not executed.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/148">Issue #148</a>.
+		</li>
+		<li>
+		F#: Lex interpolated verbatim strings as verbatim.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/156">Issue #156</a>.
+		</li>
+		<li>
+		VB: allow multiline strings when lexer.vb.strings.multiline set.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/151">Issue #151</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.3.5</li>
+	<ul>
+		<li>
+		On Win32, implement IME context sensitivity with IMR_DOCUMENTFEED.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1310/">Feature #1310</a>.
+		</li>
+		<li>
+		On Win32 remove dependence on MSIMG32.DLL  by replacing AlphaBlend
+		by GdiAlphaBlend.
+		<a href="https://sourceforge.net/p/scintilla/bugs/1923/">Bug #1923</a>.
+		</li>
+		<li>
+		On Qt, stop movement of IME candidate box.
+		</li>
+		<li>
+		On Qt, report correct caret position within paragraph for IME retrieve surrounding text.
+		</li>
+		<li>
+		On Qt for Cocoa, fix crash in entry of multi-character strings with IME.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite535.zip">Release 5.3.5</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 13 March 2023.
+		</li>
+	</ul>
+	<li>Lexilla 5.2.4</li>
+	<ul>
+		<li>
+		C++: Fix failure to recognize keywords containing upper case.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/149">Issue #149</a>.
+		</li>
+		<li>
+		GDScript: Support % and $ node paths.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/145">Issue #145</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/146">Pull request #146</a>.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite534.zip">Release 5.3.4</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 8 March 2023.
+		</li>
+	</ul>
+	<li>Lexilla 5.2.3</li>
+	<ul>
+		<li>
+		Add scripts/PromoteNew.bat script to promote .new files after checking.
+		</li>
+		<li>
+		Makefile: Remove 1024-byte line length limit..
+		</li>
+		<li>
+		Ruby: Add new lexical classes for % literals SCE_RB_STRING_W (%w non-interpolable string array),
+		SCE_RB_STRING_I (%i non-interpolable symbol array),
+		SCE_RB_STRING_QI (%I interpolable symbol array),
+		and SCE_RB_STRING_QS (%s symbol).
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/124">Issue #124</a>.
+		</li>
+		<li>
+		Ruby: Fix additional fold level for single character in SCE_RB_STRING_QW.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/132">Issue #132</a>.
+		</li>
+		<li>
+		Ruby: Disambiguate %= which may be a quote or modulo assignment.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/124">Issue #124</a>,
+		<a href="https://sourceforge.net/p/scintilla/bugs/1255/">Bug #1255</a>,
+		<a href="https://sourceforge.net/p/scintilla/bugs/2182/">Bug #2182</a>.
+		</li>
+		<li>
+		Ruby: Fix additional fold level for single character in SCE_RB_STRING_QW.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/132">Issue #132</a>.
+		</li>
+		<li>
+		Ruby: Set SCE_RB_HERE_QQ for unquoted and double-quoted heredocs and
+		SCE_RB_HERE_QX for backticks-quoted heredocs.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/134">Issue #134</a>.
+		</li>
+		<li>
+		Ruby: Recognise #{} inside SCE_RB_HERE_QQ and SCE_RB_HERE_QX.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/134">Issue #134</a>.
+		</li>
+		<li>
+		Ruby: Improve regex and heredoc recognition.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/136">Issue #136</a>.
+		</li>
+		<li>
+		Ruby: Highlight #@, #@@ and #$ style interpolation.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/140">Issue #140</a>.
+		</li>
+		<li>
+		Ruby: Fix folding for multiple heredocs started on one line.
+		Fix folding when there is a space after heredoc opening delimiter.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/135">Issue #135</a>.
+		</li>
+		<li>
+		YAML: Remove 1024-byte line length limit.
+		</li>
+	</ul>
+	<li>Scintilla 5.3.4</li>
+	<ul>
+		<li>
+		Add multithreaded wrap to significantly improve performance of wrapping large files.
+		</li>
+		<li>
+		More typesafe bindings of *Full APIs in ScintillaCall.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1477/">Feature #1477</a>.
+		</li>
+		<li>
+		Fix overlapping of text with line end wrap marker.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2378/">Bug #2378</a>.
+		</li>
+		<li>
+		Fix clipping of line end wrap symbol for SC_WRAPVISUALFLAGLOC_END_BY_TEXT.
+		</li>
+		<li>
+		Where a multi-byte character contains multiple styles, display each byte as a representation.
+		This makes it easier to see and fix lexers that change styles mid-character, commonly because
+		they use fixed size buffers.
+		</li>
+		<li>
+		Fix a potential crash with autocompletion list fill-ups where a SCN_CHARADDED
+		handler retriggered an autocompletion list, but with no items that match the typed character.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite533.zip">Release 5.3.3</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 8 February 2023.
+		</li>
+		<li>
+		Add 0-based byte position properties SelectionStart and SelectionEnd that may help when developing
+		scripts as they correspond to Scintilla arguments.
+		</li>
+		<li>
+		Fix slow-down with folding on huge documents that occurred with version 4.1.6.
+		</li>
+	</ul>
+	<li>Lexilla 5.2.2</li>
+	<ul>
+		<li>
+		C++: Fix keywords that start with non-ASCII. Also affects other lexers.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/130">Issue #130</a>.
+		</li>
+		<li>
+		Matlab: Include more prefix and suffix characters in numeric literals.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/120">Issue #120</a>.
+		</li>
+		<li>
+		Matlab: More accurate treatment of line ends inside strings. Matlab and Octave are different here.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/18">Issue #18</a>.
+		</li>
+		<li>
+		Modula-3: Don't treat identifier suffix that matches keyword as keyword.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/129">Issue #129</a>.
+		</li>
+		<li>
+		Modula-3: Fix endless loop in folder.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/128">Issue #128</a>.
+		</li>
+		<li>
+		Modula-3: Fix access to lines beyond document end in folder.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/131">Issue #131</a>.
+		</li>
+		<li>
+		Python: Don't highlight match and case as keywords in contexts where they probably aren't used as keywords.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/122">Pull request #122</a>.
+		</li>
+		<li>
+		X12: Support empty envelopes.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2369/">Bug #2369</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.3.3</li>
+	<ul>
+		<li>
+		Fix SCI_LINESJOIN bug where carriage returns were incorrectly retained.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2372/">Bug #2372</a>.
+		</li>
+		<li>
+		Fix SCI_VERTICALCENTRECARET to update the vertical scroll position.
+		</li>
+		<li>
+		When an autocompletion list is shown in response to SCN_CHARADDED, do not process character as fill-up or stop.
+		This avoids closing immediately when a character may both trigger and finish autocompletion.
+		</li>
+		<li>
+		On Cocoa fix character input bug where dotless 'i' and some other extended
+		Latin characters could not be entered.
+		The change also stops SCI_ASSIGNCMDKEY from working with these characters
+		on Cocoa.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2374/">Bug #2374</a>.
+		</li>
+		<li>
+		On GTK, support IME context.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1476/">Feature #1476</a>.
+		</li>
+		<li>
+		On GTK on Win32, fix scrolling speed to not be too fast.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2375/">Bug #2375</a>.
+		</li>
+		<li>
+		On Qt, fix indicator drawing past left of text pane over margin.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2373/">Bug #2373</a>,
+		<a href="https://sourceforge.net/p/scintilla/bugs/1956/">Bug #1956</a>.
+		</li>
+		<li>
+		On Qt, allow scrolling with mouse wheel when scroll bar hidden.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite532.zip">Release 5.3.2</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 6 December 2022.
+		</li>
+		<li>
+		Change release compilation optimization option to favour speed over space.
+		-O2 for MSVC and -O3 for gcc and clang.
+		</li>
+	</ul>
+	<li>Lexilla 5.2.1</li>
+	<ul>
+		<li>
+		Update to Unicode 14.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1461/">Feature #1461</a>.
+		</li>
+		<li>
+		Change default compilation optimization option to favour speed over space.
+		-O2 for MSVC and -O3 for gcc and clang.
+		</li>
+		<li>
+		Batch: Fix comments starting inside strings.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/115">Issue #115</a>.
+		</li>
+		<li>
+		F#: Lex signed numeric literals more accurately.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/110">Issue #110</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/111">Issue #111</a>.
+		</li>
+		<li>
+		F#: Add specifiers for 64-bit integer and floating point literals.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/112">Issue #112</a>.
+		</li>
+		<li>
+		Markdown: Stop styling numbers at line start in PRECHAR style.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/117">Issue #117</a>.
+		</li>
+		<li>
+		PowerShell: Recognise numeric literals more accurately.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/118">Issue #118</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.3.2</li>
+	<ul>
+		<li>
+		Add SCI_REPLACETARGETMINIMAL to change text without causing unchanged prefix and suffix
+		to be marked as modified in change history.
+		</li>
+		<li>
+		Draw background colour for EOL annotations with standard and boxed visuals.
+		</li>
+		<li>
+		Add SCI_GETSTYLEDTEXTFULL to support 64-bit document positions on Win32 replacing
+		SCI_GETSTYLEDTEXT which is not safe for huge documents.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1455/">Feature #1455</a>.
+		</li>
+		<li>
+		Send SCN_AUTOCCOMPLETED for SCI_AUTOCSHOW
+		triggering insertion because of SCI_AUTOCSETCHOOSESINGLE mode.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1459/">Feature #1459</a>.
+		</li>
+		<li>
+		Change 'paragraph up' commands SCI_PARAUP and SCI_PARAUPEXTEND to
+		go to the start position of the paragraph containing the caret.
+		Only if the caret is already at the start of the paragraph will it go to the start
+		of the previous paragraph.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2363/">Bug #2363</a>.
+		</li>
+		<li>
+		Change release compilation optimization option to favour speed over space.
+		-O2 for MSVC and -O3 for gcc and clang.
+		</li>
+		<li>
+		On Win32, avoid blurry display with DirectWrite in GDI scaling mode.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2344/">Bug #2344</a>.
+		</li>
+		<li>
+		On Win32, use the top-level window to find the monitor for DirectWrite rendering parameters.
+		Temporarily switch DPI awareness to find correct monitor in GDI scaling mode.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2344/">Bug #2344</a>.
+		</li>
+		<li>
+		On Qt, implement SCI_SETRECTANGULARSELECTIONMODIFIER for all platforms.
+		</li>
+		<li>
+		On Qt, allow string form XPM images for SCI_REGISTERIMAGE.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite531.zip">Release 5.3.1</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 12 October 2022.
+		</li>
+		<li>
+		Implement translucent markers.
+		</li>
+		<li>
+		Added invisiblerepresentation style attribute.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1453/">Feature #1453</a>.
+		</li>
+	</ul>
+	<li>Lexilla 5.2.0</li>
+	<ul>
+		<li>
+		PowerShell: End comment before \r carriage return so \r and \n in same
+		SCE_POWERSHELL_DEFAULT style.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/99">Pull request #99</a>.
+		</li>
+		<li>
+		PowerShell: Fix character truncation bug that lead to 'ġ' styled as an operator since its low 8 bits
+		are equal to '!'.
+		</li>
+		<li>
+		R: Support hexadecimal, float exponent and number suffix.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/101">Issue #101</a>.
+		</li>
+		<li>
+		R: Highlight backticks.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/102">Pull request #102</a>.
+		</li>
+		<li>
+		R: Highlight raw strings.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/100">Issue #100</a>.
+		</li>
+		<li>
+		R: Optionally highlight escape sequences in strings.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/100">Issue #100</a>.
+		</li>
+		<li>
+		Fix early truncation from LexAccessor::GetRange and LexAccessor::GetRangeLowered.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/17">Issue #17</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.3.1</li>
+	<ul>
+		<li>
+		Added SCI_STYLESETINVISIBLEREPRESENTATION to make it easier to edit around invisible text.
+		This also allows representing long lexemes with a single character to provide a summarized view.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1453/">Feature #1453</a>.
+		</li>
+		<li>
+		Removed NotifyLexerChanged notification from DocWatcher.
+		This is a private interface but could be used by independent platform layers
+		and was exposed by ScintillaDocument in the Qt implementation of ScintillaEdit.
+		</li>
+		<li>
+		Draw lines more consistently in SC_PHASES_TWO and SC_PHASES_ONE modes by
+		clipping drawing to just the line rectangle.
+		This stops drawing some extreme ascenders, descenders and portions of indicators which
+		may appear and then disappear depending on which lines were drawn.
+		</li>
+		<li>
+		Draw SC_MARK_BAR markers underneath other markers
+		as they often cover multiple lines for change history and other markers mark individual lines.
+		</li>
+		<li>
+		Enlarge point and point top indicators and scale to be larger with larger text.
+		</li>
+		<li>
+		Suppress change history background line shading when printing.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2358/">Bug #2358</a>.
+		</li>
+		<li>
+		Make SCI_LINESCROLL more accurate when width of space not integer.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2357/">Bug #2357</a>.
+		</li>
+		<li>
+		On Win32 implement horizontal scrolling mouse wheel.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1450/">Feature #1450</a>.
+		</li>
+		<li>
+		On Win32 implement horizontal scrolling with Shift + mouse wheel.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/749/">Feature #749</a>,
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1451/">Feature #1451</a>.
+		</li>
+		<li>
+		On Win32 ensure page and step clicks on horizontal scroll bar do not overshoot document width.
+		</li>
+		<li>
+		On GTK, fix bug where there were too many or too few lines when wrapping.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2349/">Bug #2349</a>.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite530.zip">Release 5.3.0</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 27 August 2022.
+		</li>
+		<li>
+		Implement find.exclude property to avoid searching in some files.
+		</li>
+	</ul>
+	<li>Lexilla 5.1.9</li>
+	<ul>
+		<li>
+		Julia: Parse unicode forall and exists as identifiers #42314.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/98">Pull request #98</a>.
+		</li>
+		<li>
+		Julia: Parse apostrophe as char and not adjoint after exclamation.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/97">Issue #97</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/98">Pull request #98</a>.
+		</li>
+		<li>
+		Properties: Don't set header flag for empty section.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/96">Issue #96</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.3.0</li>
+	<ul>
+		<li>
+		Added change history which can display document changes (modified, saved, ...)
+		in the margin or in the text.
+		</li>
+		<li>
+		Add SC_MARK_BAR marker and INDIC_POINT_TOP indicator.
+		SC_MARK_BAR is an outlined and filled rectangle that takes the full height of the line and 1/3
+		of the margin width.
+		To give a connected appearance, it displays even on wrapped lines and draws end caps on the first and last line.
+		INDIC_POINT_TOP is the same as INDIC_POINT but draws at the top of the line instead of the bottom.
+		INDIC_POINT and INDIC_POINTCHARACTER were tweaked to be 1 pixel taller and 2 pixels wider in
+		two-phase draw mode to be clearer.
+		The translucency of INDIC_COMPOSITIONTHICK can be changed with SCI_INDICSETOUTLINEALPHA.
+		</li>
+		<li>
+		Improve drawing of rounded rectangles on Direct2D.
+		</li>
+		<li>
+		Line state optimized to avoid excess allocations by always allocating for every line.
+		This makes SCI_GETMAXLINESTATE less useful although it can still distinguish cases
+		where line state was never set for any lines.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1441/">Feature #1441</a>.
+		</li>
+		<li>
+		Add SC_FOLDACTION_CONTRACT_EVERY_LEVEL option to contract every level for
+		SCI_FOLDALL.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2340/">Bug #2340</a>.
+		</li>
+		<li>
+		Enable multiline regex for gcc and clang when REGEX_MULTILINE defined.
+		This requires gcc 11.3 or clang 14.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2338/">Bug #2338</a>.
+		</li>
+		<li>
+		Stop including STYLE_CALLTIP when calculating line height.
+		Allows a large font to be used for calltips without affecting text display.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2341/">Bug #2341</a>.
+		</li>
+		<li>
+		Fix incorrect display of selection when printing in some modes.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2335/">Bug #2335</a>.
+		</li>
+		<li>
+		Fix crash on Qt when showing autocompletion and the caret isn't on a screen.
+		Move autocompletion onto screen when above it.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite524.zip">Release 5.2.4</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 10 July 2022.
+		</li>
+		<li>
+		The default set of languages imported and visible in menus now includes Markdown and PowerShell.
+		Ada, Caml, D, and Fortran were excluded but can be reenabled by users setting the
+		`imports.exclude' property.
+		</li>
+		<li>
+		On GTK, path bar text can be selected.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1439/">Feature #1439</a>.
+		</li>
+	</ul>
+	<li>Lexilla 5.1.8</li>
+	<ul>
+		<li>
+		F#: Recognize nested comments in F#.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/93">Issue #93</a>.
+		</li>
+		<li>
+		MS SQL: Recognize nested comments in Transact-SQL.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/87">Issue #87</a>.
+		</li>
+		<li>
+		MS SQL: Preference data types more consistently to not depend on how lexing is broken
+		up into segments. This is needed because there are keywords that are both data type
+		names and function names such as 'CHAR'.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/90">Issue #90</a>.
+		</li>
+		<li>
+		PowerShell: Fix single quoted strings to not treat backtick as escape.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/92">Pull request #92</a>.
+		</li>
+		<li>
+		Visual Prolog: Treat \r\n line ends the same as \n. This makes testing easier.
+		Add test case.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/83">Issue #83</a>.
+		</li>
+		<li>
+		Visual Prolog: Allow disabling verbatim strings.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/89">Pull request #89</a>.
+		</li>
+		<li>
+		Visual Prolog: Support backquoted strings.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/89">Pull request #89</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.2.4</li>
+	<ul>
+		<li>
+		Fix hiding selection when selection layer is SC_LAYER_UNDER_TEXT.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2334/">Bug #2334</a>.
+		</li>
+		<li>
+		Fix bad background colour for additional, secondary, and inactive selections when printing.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2335/">Bug #2335</a>.
+		</li>
+		<li>
+		Fix failures on GTK with non-UTF-8 text when multi-threading due to
+		character set conversion code that was not thread-safe.
+		</li>
+		<li>
+		Fix crash when printing on Win32 in bidirectional mode with a non-empty selection.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite523.zip">Release 5.2.3</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 22 May 2022.
+		</li>
+		<li>
+		Fix crash on Windows after opening a file with File Open dialog when open.filter empty.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2325/">Bug #2325</a>.
+		</li>
+		<li>
+		Fix hang on Windows with file on UNC share.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2326/">Bug #2326</a>.
+		</li>
+		<li>
+		Fix display of replacement field in replace strip on Windows with 250% scaling.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2331/">Bug #2331</a>.
+		</li>
+		<li>
+		Fix localisation for text that start with "match".
+		<a href="https://sourceforge.net/p/scintilla/bugs/2327/">Bug #2327</a>.
+		</li>
+	</ul>
+	<li>Lexilla 5.1.7</li>
+	<ul>
+		<li>
+		Add LexAccessor::StyleIndexAt to retrieve style values as unsigned to handle styles > 127 better.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/61">Issue #61</a>.
+		</li>
+		<li>
+		Associate more than one file extension with a setting for testing.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/81">Issue #81</a>.
+		</li>
+		<li>
+		CMake: Fix folding of "ElseIf".
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/77">Issue #77</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/78">Pull request #78</a>,
+		<a href="https://sourceforge.net/p/scintilla/bugs/2213/">Bug #2213</a>.
+		</li>
+		<li>
+		HTML: Fix folding of JavaScript doc comments.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2219/">Bug #2219</a>.
+		</li>
+		<li>
+		Matlab: add "classdef" and "spmd" to folding keywords.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/70">Pull request #70</a>.
+		</li>
+		<li>
+		Matlab: handle "arguments" contextual keyword.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/70">Pull request #70</a>.
+		</li>
+		<li>
+		Matlab: improve support of class definition syntax.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/75">Pull request #75</a>.
+		</li>
+		<li>
+		Raku: fix escape detection.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/76">Pull request #76</a>.
+		</li>
+		<li>
+		Ruby: fix character sequence "?\\#" to not include '#' in SCE_RB_NUMBER as only second '\' is quoted.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/69">Issue #69</a>.
+		</li>
+		<li>
+		Ruby: improve styling of ternary expressions as commonly used.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/69">Issue #69</a>.
+		</li>
+		<li>
+		VHDL: support folding for VHDL 08 else-generate and case-generate.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/80">Pull request #80</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.2.3</li>
+	<ul>
+		<li>
+		Duplicate APIs to support 64-bit document positions on Win32:
+		SCI_GETTEXTRANGEFULL, SCI_FINDTEXTFULL, and SCI_FORMATRANGEFULL.
+		This adds new types to Scintilla.iface which may impact downstream projects.
+		Applications should move to these APIs from their predecessors as they will be deprecated.
+		</li>
+		<li>
+		Improve performance of SCI_FOLDALL(SC_FOLDACTION_EXPAND) by not lexing whole document
+		as it does not depend on folding structure.
+		</li>
+		<li>
+		Fix partial updates and non-responsive scroll bars on Xorg.
+		This defers scroll bar changes to an idle task so could affect applications that depend on
+		the scroll position being updated.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2322/">Bug #2322</a>,
+		<a href="https://sourceforge.net/p/scintilla/bugs/2196/">Bug #2196</a>,
+		<a href="https://sourceforge.net/p/scintilla/bugs/2312/">Bug #2312</a>.
+		</li>
+		<li>
+		Fix problem with horizontally inverted glyphs with buffered drawing and WS_EX_LAYOUTRTL set on Win32 GDI.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1435/">Feature #1435</a>.
+		</li>
+		<li>
+		Fix ARM64 builds with Visual C++ due to unsupported CETCOMPAT flag.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2324/">Bug #2324</a>.
+		</li>
+		<li>
+		On Cocoa, place autocompletion lists and calltips on a higher window level so they can be seen
+		when invoked from a modal dialog.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2329/">Bug #2329</a>.
+		</li>
+		<li>
+		For Qt 6, fix "modified" signal when text is null but length non-0.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2328/">Bug #2328</a>.
+		</li>
+		<li>
+		Fix pink selection background when printing by making it completely transparent.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite522.zip">Release 5.2.2</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 31 March 2022.
+		</li>
+		<li>
+		Add "match" statement to local and directories properties to simplify setting properties
+		for particular files. Add $(RelativePath) for path from directory properties directory to
+		current file. Set file name properties in wider scope to allow use in "if" tests.
+		</li>
+		<li>
+		Fix pattern matching for EditorConfig: '?' does not match '/'.
+		Support numeric ranges {start..end} and set ranges [a-z].
+		</li>
+		<li>
+		Fix showing folded lines when using find strip.
+		</li>
+		<li>
+		Add scite.ReloadProperties function to Lua.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1434/">Feature #1434</a>.
+		</li>
+		<li>
+		Fix read-only indicator on GTK.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2313/">Bug #2313</a>.
+		</li>
+		<li>
+		Show read-only indicator in title bar.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2313/">Bug #2313</a>.
+		</li>
+		<li>
+		Fix icon showing on GTK.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2314/">Bug #2314</a>.
+		</li>
+	</ul>
+	<li>Lexilla 5.1.6</li>
+	<ul>
+		<li>
+		Implement conditional statements "if" and "match", comparison function "$(=", and "FileNameExt"
+		property in TestLexers to allow varying lexer properties over different files.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/62">Issue #62</a>.
+		</li>
+		<li>
+		Add LexAccessor::BufferStyleAt to retrieve style values to simplify logic and
+		improve performance.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/54">Issue #54</a>.
+		</li>
+		<li>
+		Markdown: Optionally style all of Markdown header lines.
+		Enabled with lexer.markdown.header.eolfill=1.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/60">Issue #60</a>.
+		</li>
+		<li>
+		Ruby: Fix operator method styling so next word not treated as method name.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/65">Issue #65</a>.
+		</li>
+		<li>
+		Ruby: Fix folding for Ruby 3 endless method definition.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/65">Issue #65</a>.
+		</li>
+		<li>
+		Ruby: Fold string array SCE_RB_STRING_QW.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/65">Issue #65</a>.
+		</li>
+		<li>
+		Ruby: Fix final \n in indented heredoc to be SCE_RB_HERE_Q.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/66">Issue #66</a>.
+		</li>
+		<li>
+		Ruby: Fix heredoc recognition when '.' and ',' used in method calls and after SCE_RB_GLOBAL.
+		Classify word after heredoc delimiter instead of styling as keyword.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/67">Issue #67</a>.
+		</li>
+		<li>
+		Ruby: Improve method highlighting so method name is styled as SCE_RB_DEFNAME and class/object
+		is styled appropriately.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/68">Issue #68</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.2.2</li>
+	<ul>
+		<li>
+		Add SCI_GETSTYLEINDEXAT API to return styles over 127 as positive integers.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1431/">Feature #1431</a>.
+		</li>
+		<li>
+		On GTK, scroll horizontally with shift + scroll wheel.
+		</li>
+		<li>
+		Fix crash with unexpected right-to-left text on GTK.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2309/">Bug #2309</a>.
+		</li>
+		<li>
+		Fix position of end-of-line annotation when fold display text is visible.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2320/">Bug #2320</a>.
+		</li>
+		<li>
+		On Direct2D, support per-monitor text rendering parameters.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1432/">Feature #1432</a>.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite521.zip">Release 5.2.1</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 24 February 2022.
+		</li>
+	</ul>
+	<li>Lexilla 5.1.5</li>
+	<li>Scintilla 5.2.1</li>
+	<ul>
+		<li>
+		Enable multi-threaded layout on GTK.
+		</li>
+		<li>
+		Fix pixmap leak on GTK.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2317/">Bug #2317</a>.
+		</li>
+		<li>
+		Fix re-entrant painting on GTK to maintain update region.
+		</li>
+		<li>
+		Fix key map for GTK on macOS.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2315/">Bug #2315</a>.
+		</li>
+		<li>
+		Fix building for Haiku.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2315/">Bug #2315</a>.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite520.zip">Release 5.2.0</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 9 February 2022.
+		</li>
+		<li>
+		Fix bug where autocomplete did not display for last character of the document.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2307/">Bug #2307</a>.
+		</li>
+		<li>
+		Fix Export as HTML default style when export.html.wysiwyg=0.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2311/">Bug #2311</a>.
+		</li>
+	</ul>
+ 	<li>Lexilla 5.1.5</li>
+	<ul>
+		<li>
+		Bash: Treat \r\n line ends the same as \n. This makes testing easier.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/57">Issue #57</a>.
+		</li>
+		<li>
+		Batch: Recognise "::" comments when second command on line.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2304/">Bug #2304</a>.
+		</li>
+		<li>
+		F#: Recognise format specifiers in interpolated strings and %B for binary.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/46">Issue #46</a>.
+		</li>
+		<li>
+		F#: More accurate line-based folding.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/56">Issue #56</a>.
+		</li>
+		<li>
+		HTML: Fix folding inside script blocks.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/47">Issue #47</a>,
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/53">Issue #53</a>.
+		</li>
+		<li>
+		Inno Setup: Fix multiline comments in code.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/44">Issue #44</a>.
+		</li>
+		<li>
+		Python: Add attribute style with properties lexer.python.identifier.attributes and
+		lexer.python.decorator.attributes.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/49">Pull request #49</a>.
+		</li>
+		<li>
+		Allow choice of object file directory with makefile by setting DIR_O.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/50">Issue #50</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.2.0</li>
+	<ul>
+		<li>
+		Add multithreaded layout to significantly improve performance for very wide lines.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1427/">Feature #1427</a>.
+		</li>
+		<li>
+		Made compatible with Qt 6.
+		</li>
+		<li>
+		Fix potential issue with length of buffer for string returning APIs in ScintillaEdit on Qt.
+		</li>
+		<li>
+		Fix inaccurate scroll bar when there are annotations and wrapping of inserted or deleted text changes
+		number of screen lines.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1422/">Feature #1422</a>.
+		</li>
+		<li>
+		Allow choice of object file directory with makefile by setting DIR_O.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2306/">Bug #2306</a>.
+		</li>
+		<li>
+		On GTK, use fractional positioning to help Chinese characters in monospaced fonts
+		line up better with roman characters.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2310/">Bug #2310</a>.
+		</li>
+		<li>
+		On macOS allow Scintilla to run if built without cursor images.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1425/">Feature #1425</a>.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite516.zip">Release 5.1.6</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 7 December 2021.
+		</li>
+		<li>
+		Fix Lua GetSelText method to not return an extra NUL.
+		</li>
+	</ul>
+	<li>Lexilla 5.1.4</li>
+	<ul>
+		<li>
+		Add AsciiDoc lexer.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/39">Pull request #39</a>.
+		</li>
+		<li>
+		Add GDScript lexer.
+		Some behaviour and lexical states may change before this lexer is stable.
+		<a href="https://github.com/ScintillaOrg/lexilla/pull/41">Pull request #41</a>.
+		</li>
+		<li>
+		Fix strings ending in escaped '\' in F#.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/38">Issue #38</a>.
+		</li>
+		<li>
+		Better handling of bad terminators and folding for X12.
+		<a href="https://sourceforge.net/p/scintilla/feature-requests/1420/">Feature #1420</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.1.5</li>
+	<ul>
+		<li>
+		ScintillaEditPy, Python bindings for Qt using PySide, has been removed.
+		Scintilla was never updated for PySide 2 which was released in 2018 and PySide 1
+		fell out of support making it difficult to use.
+		Tests that use ScintillaEditPy were removed.
+		</li>
+		<li>
+		When calling SCI_GETTEXT, SCI_GETSELTEXT, and SCI_GETCURLINE with a NULL buffer argument
+		to discover the length that should be allocated, do not include the terminating NUL in the returned value.
+		The value returned is 1 less than previous versions of Scintilla.
+		Applications should allocate a buffer 1 more than this to accommodate the NUL.
+		The wParam (length) argument to SCI_GETTEXT and SCI_GETCURLINE also omits the NUL.
+		This is more consistent with other APIs.
+		</li>
+		<li>
+		Fix assertion failure with autocompletion list when order is SC_ORDER_CUSTOM
+		or SC_ORDER_PERFORMSORT and the list is empty.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2294/">Bug #2294</a>.
+		</li>
+		<li>
+		On Win32 prevent potential memory leaks for Korean language input.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2295/">Bug #2295</a>.
+		</li>
+		<li>
+		On Cocoa set active state correctly at creation.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2299/">Bug #2299</a>.
+		</li>
+		<li>
+		On macOS 12, fix bug where margin would not draw when scrolled.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2292/">Bug #2292</a>.
+		</li>
+		<li>
+		On Cocoa, fix crash when drag image empty.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2300/">Bug #2300</a>.
+		</li>
+		<li>
+		On GTK using Wayland, display autocompletion with window on a secondary monitor.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2296/">Bug #2296</a>,
+		<a href="https://sourceforge.net/p/scintilla/bugs/2261/">Bug #2261</a>.
+		</li>
+	</ul>
+    </ul>
+    <h3>
+       <a href="https://www.scintilla.org/scite515.zip">Release 5.1.5</a>
+    </h3>
+    <ul>
+	<li>SciTE</li>
+	<ul>
+		<li>
+		Released 8 November 2021.
+		</li>
+		<li>
+		Fix highlighting of matches with "Mark All" button in find strip.
+		</li>
+	</ul>
+	<li>Lexilla 5.1.3</li>
+	<ul>
+		<li>
+		Fix parsing of 128-bit integer literals in Rust.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/33">Issue #33</a>.
+		</li>
+		<li>
+		Fix different styles between \r and \n at end of line comments for Rust.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/34">Issue #34</a>.
+		</li>
+		<li>
+		For Rust, don't go past end when file ends with unterminated block comment.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/35">Issue #35</a>.
+		</li>
+	</ul>
+	<li>Scintilla 5.1.4</li>
+	<ul>
+		<li>
+		Add DEL to standard set of space characters for word operations.
+		</li>
+		<li>
+		Add CARETSTYLE_CURSES to draw more than 1 caret on curses terminal.
+		</li>
+		<li>
+		On GTK, fix primary selection paste within same instance.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2287/">Bug #2287</a>.
+		</li>
+		<li>
+		On GTK, fix potential crash when closing Scintilla instances due to releasing global settings object.
+		</li>
+		<li>
+		On Win32, when window is wider than scroll width,
+		use correct values when checking whether to change horizontal scroll bar so
+		only update and notify dwell end when needed.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2288/">Bug #2288</a>.
+		</li>
+		<li>
+		GetLineEndTypesSupported returns LineEndType, not int.
+		</li>
+	</ul>
+    </ul>
+    <h3>
        <a href="https://www.scintilla.org/scite514.zip">Release 5.1.4</a>
     </h3>
     <ul>
 	<li>SciTE</li>
 	<ul>
 		<li>
-		Released 23 September 2021.
+		Released 29 September 2021.
 		</li>
 	</ul>
 	<li>Scintilla 5.1.3</li>
@@ -982,23 +2246,16 @@
 		Add namespace feature with GetNameSpace function.
 		</li>
 		<li>
-		AddStaticLexerModule function adds a static lexer to Lexilla's list.
-		</li>
-		<li>
 		Add Julia lexer.
 		<a href="https://sourceforge.net/p/scintilla/feature-requests/1380/">Feature #1380</a>.
-		</li>
-		<li>
-		Fix variable expansion in Batch.
-		<a href="https://github.com/ScintillaOrg/lexilla/issues/4">Issue #4</a>.
 		</li>
 		<li>
 		Fix transition to comment for --> inside JavaScript string.
 		<a href="https://sourceforge.net/p/scintilla/bugs/2207/">Bug #2207</a>.
 		</li>
 		<li>
-		Remove nested comment and long string support as these were removed from Lua.
-		<a href="https://sourceforge.net/p/scintilla/bugs/2205/">Bug #2205</a>.
+		Fix variable expansion in Batch.
+		<a href="https://github.com/ScintillaOrg/lexilla/issues/4">Issue #4</a>.
 		</li>
 		<li>
 		Fix empty link titles in Markdown.
@@ -1006,8 +2263,15 @@
 		Also fix detection of whether the previous line had content which treated '\n' and '\r\n' line endings differently.
 		</li>
 		<li>
+		Remove nested comment and long string support as these were removed from Lua.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2205/">Bug #2205</a>.
+		</li>
+		<li>
 		Update to Unicode 13.
 		<a href="https://sourceforge.net/p/scintilla/feature-requests/1379/">Feature #1379</a>.
+		</li>
+		<li>
+		AddStaticLexerModule function adds a static lexer to Lexilla's list.
 		</li>
 		<li>
 		On Win32 enable hardware-enforced stack protection.
@@ -1042,14 +2306,14 @@
 		This replaces the use of SC_ALPHA_NOALPHA for markers.
 		</li>
 		<li>
+		Add SCI_GETELEMENTBASECOLOUR to return the default values for element colours.
+		</li>
+		<li>
 		Add SC_ELEMENT_WHITE_SPACE to set the colour of visible whitespace including translucency.
 		</li>
 		<li>
 		Add elements for hot spots SC_ELEMENT_HOT_SPOT_ACTIVE and
 		SC_ELEMENT_HOT_SPOT_ACTIVE_BACK.
-		</li>
-		<li>
-		Add SCI_GETELEMENTBASECOLOUR to return the default values for element colours.
 		</li>
 		<li>
 		Make idle actions wrapping and background styling smoother by
@@ -1059,16 +2323,16 @@
 		<a href="https://sourceforge.net/p/scintilla/feature-requests/1373/">Feature #1373</a>.
 		</li>
 		<li>
-		Include modifiers in SCN_INDICATORRELEASE notification.
-		<a href="https://sourceforge.net/p/scintilla/bugs/2254/">Bug #2254</a>.
+		On GTK 3 with Wayland, fix primary selection.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2227/">Bug #2227</a>.
 		</li>
 		<li>
 		Update to Unicode 13.
 		<a href="https://sourceforge.net/p/scintilla/feature-requests/1379/">Feature #1379</a>.
 		</li>
 		<li>
-		On GTK 3 with Wayland, fix primary selection.
-		<a href="https://sourceforge.net/p/scintilla/bugs/2227/">Bug #2227</a>.
+		Include modifiers in SCN_INDICATORRELEASE notification.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2254/">Bug #2254</a>.
 		</li>
 		<li>
 		On Win32 enable hardware-enforced stack protection.
@@ -1116,17 +2380,17 @@
 	<li>Scintilla 5.0.2</li>
 	<ul>
 		<li>
+		On Cocoa with macOS 11, use plain style for autocompletion to fix problems with truncating text
+		and padding. This makes autocompletion look the same on macOS 11 as macOS 10.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2248/">Bug #2248</a>.
+		</li>
+		<li>
 		On Windows, fix encoding used for text display with DirectWrite.
 		<a href="https://sourceforge.net/p/scintilla/bugs/2246/">Bug #2246</a>.
 		</li>
 		<li>
 		Implement font locale SCI_SETFONTLOCALE. Initially only for DirectWrite on Win32.
 		<a href="https://sourceforge.net/p/scintilla/bugs/2027/">Bug #2027</a>.
-		</li>
-		<li>
-		On Cocoa with macOS 11, use plain style for autocompletion to fix problems with truncating text
-		and padding. This makes autocompletion look the same on macOS 11 as macOS 10.
-		<a href="https://sourceforge.net/p/scintilla/bugs/2248/">Bug #2248</a>.
 		</li>
 	</ul>
     </ul>
@@ -1195,13 +2459,11 @@
 		SCI_MARKERSETBACKSELECTEDTRANSLUCENT, SCI_MARKERSETSTROKEWIDTH.
 		</li>
 		<li>
-		Change graphics coordinates from float (32-bit) to double (64-bit).
-		Fixes uneven line heights in large documents on Cocoa.
-		Increases memory use.
-		<a href="https://sourceforge.net/p/scintilla/bugs/2224/">Bug #2224</a>.
+		Add shapes with curved and rounded ends to EOL annotations as EOLANNOTATION_*.
 		</li>
 		<li>
-		Add shapes with curved and rounded ends to EOL annotations as EOLANNOTATION_*.
+		Add SCI_SETELEMENTCOLOUR and related APIs to change colours of visible elements.
+		Implement SC_ELEMENT_LIST* to change colours of autocompletion lists.
 		</li>
 		<li>
 		Support Unicode characters as margin markers with SC_MARK_CHARACTER.
@@ -1210,21 +2472,23 @@
 		EOL annotation text is now always treated as UTF-8 instead of in the document encoding.
 		</li>
 		<li>
-		Add SCI_SETELEMENTCOLOUR and related APIs to change colours of visible elements.
-		Implement SC_ELEMENT_LIST* to change colours of autocompletion lists.
+		Change graphics coordinates from float (32-bit) to double (64-bit).
+		Fixes uneven line heights in large documents on Cocoa.
+		Increases memory use.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2224/">Bug #2224</a>.
 		</li>
 		<li>
 		On Cocoa, fix drawing in revealed area after enlarging window.
 		<a href="https://sourceforge.net/p/scintilla/bugs/2238/">Bug #2238</a>.
 		</li>
 		<li>
+		On Win32, fix crash with SC_TECHNOLOGY_DIRECTWRITERETAIN.
+		<a href="https://sourceforge.net/p/scintilla/bugs/2243/">Bug #2243</a>.
+		</li>
+		<li>
 		On GTK, changes in system font settings (such as from Tweak) are detected and position
 		caches are invalidated since different font display options, such as antialiasing, change
 		character shape and thus positions.
-		</li>
-		<li>
-		On Win32, fix crash with SC_TECHNOLOGY_DIRECTWRITERETAIN.
-		<a href="https://sourceforge.net/p/scintilla/bugs/2243/">Bug #2243</a>.
 		</li>
 	</ul>
     </ul>
@@ -1956,7 +3220,7 @@
 	</li>
  	<li>
 	SciTE supports changing caret style via caret.style property.
-	<a href="https://sourceforge.net/p/scintilla/feature-requests/1264/">Feature #1624</a>.
+	<a href="https://sourceforge.net/p/scintilla/feature-requests/1264/">Feature #1264</a>.
 	</li>
  	<li>
 	Lexer added for .NET's Common Intermediate Language CIL.
@@ -2455,15 +3719,15 @@
 	</li>
 	<li>
 	Minor undefined behaviour fixed.
-	<a href="https://sourceforge.net/p/scintilla/bugs/1978">Bug #1978</a>.
+	<a href="https://sourceforge.net/p/scintilla/bugs/1978/">Bug #1978</a>.
 	</li>
 	<li>
 	On Cocoa, improve scrolling on macOS 10.12.
-	<a href="https://sourceforge.net/p/scintilla/bugs/1885">Bug #1885</a>.
+	<a href="https://sourceforge.net/p/scintilla/bugs/1885/">Bug #1885</a>.
 	</li>
 	<li>
 	On Cocoa, fix line selection by clicking in the margin when scrolled.
-	<a href="https://sourceforge.net/p/scintilla/bugs/1971">Bug #1971</a>.
+	<a href="https://sourceforge.net/p/scintilla/bugs/1971/">Bug #1971</a>.
 	</li>
     </ul>
     <h3>
@@ -2548,7 +3812,7 @@
 	</li>
 	<li>
 	On GTK+ fix drawing problems including incorrect scrollbar redrawing and flickering of text.
-	<a href="https://sourceforge.net/p/scintilla/bugs/1876">Bug #1876</a>.
+	<a href="https://sourceforge.net/p/scintilla/bugs/1876/">Bug #1876</a>.
 	</li>
 	<li>
 	On Linux, both for GTK+ and Qt, the default modifier key for rectangular selection is now Alt.
@@ -2559,7 +3823,7 @@
 	<li>
 	On Cocoa, fix doCommandBySelector but avoid double effect of 'delete'
 	key.
-	<a href="https://sourceforge.net/p/scintilla/bugs/1958">Bug #1958</a>.
+	<a href="https://sourceforge.net/p/scintilla/bugs/1958/">Bug #1958</a>.
 	</li>
 	<li>
 	On Qt, the updateUi signal includes the 'updated' flags.
@@ -5612,7 +6876,7 @@
 	</li>
 	<li>
 	Added ncurses platform definitions. Implementation is maintained separately as
-	<a href="https://foicica.com/scinterm/">Scinterm</a>.
+	<a href="https://orbitalquark.github.io/scinterm">Scinterm</a>.
 	</li>
     </ul>
     <h3>

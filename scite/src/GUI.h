@@ -28,7 +28,7 @@ public:
 	int right;
 	int bottom;
 
-	constexpr Rectangle(int left_=0, int top_=0, int right_=0, int bottom_ = 0) noexcept :
+	explicit constexpr Rectangle(int left_=0, int top_=0, int right_=0, int bottom_ = 0) noexcept :
 		left(left_), top(top_), right(right_), bottom(bottom_) {
 	}
 	bool Contains(Point pt) const noexcept {
@@ -47,7 +47,7 @@ public:
 
 #if defined(GTK) || defined(__APPLE__)
 
-// On GTK and OS X use UTF-8 char strings
+// On GTK and macOS use UTF-8 char strings
 
 typedef char gui_char;
 typedef std::string gui_string;
@@ -69,7 +69,8 @@ typedef std::wstring_view gui_string_view;
 
 gui_string StringFromUTF8(const char *s);
 gui_string StringFromUTF8(const std::string &s);
-std::string UTF8FromString(const gui_string &s);
+gui_string StringFromUTF8(std::string_view sv);
+std::string UTF8FromString(gui_string_view sv);
 gui_string StringFromInteger(long i);
 gui_string StringFromLongLong(long long i);
 gui_string HexStringFromInteger(long i);
@@ -103,7 +104,7 @@ public:
 		return !!wid;
 	}
 	void Destroy();
-	bool HasFocus();
+	bool HasFocus() const noexcept;
 	Rectangle GetPosition();
 	void SetPosition(Rectangle rc);
 	Rectangle GetClientPosition();

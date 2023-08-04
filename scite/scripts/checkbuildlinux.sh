@@ -41,54 +41,54 @@ cd ../..
 # ************************************************************
 # Target 1: gcc build for GTK+ 2
 (
-cd scintilla/test/unit || exit
-make clean
-make "$JOBS" test
-make clean
+	cd scintilla/test/unit || exit
+	make clean
+	make "$JOBS" test
+	make clean
 )
 
 (
-cd lexilla/src || exit
-make clean
-make "$JOBS"
+	cd lexilla/src || exit
+	make clean
+	make "$JOBS"
 )
 (
-cd lexilla/test || exit
-make clean
-make test
-make clean
+	cd lexilla/test || exit
+	make clean
+	make test
+	make clean
 )
 (
-cd lexilla/test/unit || exit
-make clean
-make test
-make clean
-)
-
-(
-cd scintilla/gtk || exit
-make clean
-make "$JOBS" "$NO_GLIB_DEPRECATIONS" GTK2=1
+	cd lexilla/test/unit || exit
+	make clean
+	make test
+	make clean
 )
 
 (
-cd scite/gtk || exit
-make clean
-make "$JOBS" "$NO_GLIB_DEPRECATIONS" GTK2=1
+	cd scintilla/gtk || exit
+	make clean
+	make "$JOBS" "$NO_GLIB_DEPRECATIONS" GTK2=1
+)
+
+(
+	cd scite/gtk || exit
+	make clean
+	make "$JOBS" "$NO_GLIB_DEPRECATIONS" GTK2=1
 )
 
 # ************************************************************
 # Target 2: gcc build for GTK+ 3
 (
-cd scintilla/gtk || exit
-make clean
-make "$JOBS" "$NO_GLIB_DEPRECATIONS" GTK3=1
+	cd scintilla/gtk || exit
+	make clean
+	make "$JOBS" "$NO_GLIB_DEPRECATIONS" GTK3=1
 )
 
 (
-cd scite/gtk || exit
-make clean
-make "$JOBS" GTK3=1
+	cd scite/gtk || exit
+	make clean
+	make "$JOBS" "$NO_GLIB_DEPRECATIONS" GTK3=1
 )
 
 # ************************************************************
@@ -106,99 +106,89 @@ elif hash qmake-qt4 2>/dev/null; then
 fi
 
 (
-cd scintilla/qt || exit
+	cd scintilla/qt || exit
 
-(
-cd ScintillaEditBase || exit
-$QMAKENAME
-make clean
-make "$JOBS"
-make distclean
-)
+	(
+		cd ScintillaEditBase || exit
+		$QMAKENAME
+		make clean
+		make "$JOBS"
+		make distclean
+	)
 
-(
-cd ScintillaEdit || exit
-python3 WidgetGen.py
-$QMAKENAME
-make clean
-make "$JOBS"
-make distclean
-)
-
-#~ (
-#~ cd ScintillaEditPy || exit
-#~ python2 sepbuild.py
-#~ cd ../../test || exit
-#~ python2 simpleTests.py
-#~ python2 lexTests.py
-#~ python2 performanceTests.py
-#~ cd ../qt/ScintillaEditPy || exit
-#~ python2 sepbuild.py --clean
-#~ )
+	(
+		cd ScintillaEdit || exit
+		python3 WidgetGen.py
+		$QMAKENAME
+		make clean
+		make "$JOBS"
+		make distclean
+	)
 
 )
 
 # ************************************************************
 # Target 4: clang build for GTK+ 2
 (
-cd lexilla/src || exit
-make clean
-make "$JOBS" CLANG=1 GTK2=1
+	cd lexilla/src || exit
+	make clean
+	make "$JOBS" CLANG=1 GTK2=1
 )
 
 (
-cd scintilla/gtk || exit
-make clean
-make "$JOBS" "$NO_GLIB_DEPRECATIONS" CLANG=1 GTK2=1
+	cd scintilla/gtk || exit
+	make clean
+	make "$JOBS" "$NO_GLIB_DEPRECATIONS" CLANG=1 GTK2=1
 )
 
 (
-cd scite/gtk || exit
-make clean
-make "$JOBS" "$NO_GLIB_DEPRECATIONS" CLANG=1 GTK2=1
+	cd scite/gtk || exit
+	make clean
+	make "$JOBS" "$NO_GLIB_DEPRECATIONS" CLANG=1 GTK2=1
 )
 
 # ************************************************************
 # Target 5: clang build for GTK+ 3
 (
-cd scintilla/gtk || exit
-make clean
-make "$JOBS" "$NO_GLIB_DEPRECATIONS" CLANG=1 GTK3=1
+	cd scintilla/gtk || exit
+	make clean
+	make "$JOBS" "$NO_GLIB_DEPRECATIONS" CLANG=1 GTK3=1
 )
 
 (
-cd scite/gtk || exit
-make clean
-make "$JOBS" CLANG=1 GTK3=1
+	cd scite/gtk || exit
+	make clean
+	make "$JOBS" "$NO_GLIB_DEPRECATIONS" CLANG=1 GTK3=1
 )
 
 # ************************************************************
 # Target 6: clang analyze for GTK+ 2
 (
-cd lexilla/src || exit
-make clean
-make "$JOBS" CLANG=1 analyze
+	cd lexilla/src || exit
+	make clean
+	make "$JOBS" CLANG=1 analyze
 )
 
 (
-cd scintilla/gtk || exit
-make clean
-make "$JOBS" "$NO_GLIB_DEPRECATIONS" analyze
+	cd scintilla/gtk || exit
+	make clean
+	make "$JOBS" "$NO_GLIB_DEPRECATIONS" analyze
 )
 
 (
-cd scite/gtk || exit
-make clean
-make "$JOBS" "$NO_GLIB_DEPRECATIONS" analyze
-make clean
-cd ../..
-cd scintilla/gtk || exit
-make clean
+	cd scite/gtk || exit
+	make clean
+	make "$JOBS" "$NO_GLIB_DEPRECATIONS" analyze
+	make clean
+	cd ../..
+	cd scintilla/gtk || exit
+	make clean
 )
 
 # ************************************************************
 # Target 7: cppcheck static checker
 # Disabled as there are false warnings and some different style choices
-cppcheck --enable=all --max-configs=120 --suppressions-list=lexilla/cppcheck.suppress -I lexilla/include -I lexilla/lexlib --template=gcc --quiet lexilla
+cppcheck --enable=all --max-configs=120 --suppressions-list=lexilla/cppcheck.suppress -I lexilla/include -I lexilla/lexlib -I lexilla/access -I scintilla/include --template=gcc --quiet lexilla
 cppcheck --enable=all --max-configs=100 --suppressions-list=scintilla/cppcheck.suppress -I scintilla/src -I scintilla/include -I scintilla/qt/ScintillaEditBase "-DSTDMETHODIMP_(type) type STDMETHODCALLTYPE" --template=gcc --quiet scintilla
-cppcheck --enable=all --max-configs=100 --suppressions-list=scite/cppcheck.suppress -I scite/src -I scintilla/include -I scite/lua/src -Ulua_assert -DPATH_MAX=260 --template=gcc --quiet scite
+cppcheck --enable=all --max-configs=100 --suppressions-list=scite/cppcheck.suppress -I scite/src -I scintilla/include -I lexilla/access -I scite/lua/src -Ulua_assert -DPATH_MAX=260 --template=gcc --quiet scite
+)

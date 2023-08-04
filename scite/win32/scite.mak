@@ -46,11 +46,11 @@ CCFLAGS=-TC -MP -W3 -wd4244 -D_CRT_SECURE_NO_DEPRECATE=1 -DLUA_USER_H=\"scite_lu
 
 CXXDEBUG=-Od -MTd -DDEBUG
 # Don't use "-MD", even with "-D_STATIC_CPPLIB" because it links to MSVCR71.DLL
-CXXNDEBUG=-O1 -Oi -MT -DNDEBUG -GL
+CXXNDEBUG=-O2 -Oi -MT -DNDEBUG -GL
 NAME=-Fo
 LDFLAGS=-OPT:REF -LTCG -DEBUG $(SUBSYSTEM) $(CETCOMPAT)
 LDDEBUG=
-LIBS=KERNEL32.lib USER32.lib GDI32.lib MSIMG32.lib COMDLG32.lib COMCTL32.lib ADVAPI32.lib IMM32.lib SHELL32.LIB OLE32.LIB OLEAUT32.LIB UXTHEME.LIB
+LIBS=KERNEL32.lib USER32.lib GDI32.lib COMDLG32.lib COMCTL32.lib ADVAPI32.lib IMM32.lib SHELL32.LIB OLE32.LIB OLEAUT32.LIB UXTHEME.LIB
 NOLOGO=-nologo
 
 !IFDEF QUIET
@@ -89,6 +89,7 @@ SHAREDOBJS=\
 	LexillaAccess.obj \
 	MatchMarker.obj \
 	MultiplexExtension.obj \
+	PathMatch.obj \
 	PropSetFile.obj \
 	ScintillaCall.obj \
 	ScintillaWindow.obj \
@@ -119,37 +120,37 @@ OBJSSTATIC=$(SHAREDOBJS) Sc1.obj
 #**LEXPROPS=\\\n\($(DIR_BIN)\\\* \)
 LEXPROPS=\
 $(DIR_BIN)\abaqus.properties $(DIR_BIN)\ada.properties \
-$(DIR_BIN)\asl.properties $(DIR_BIN)\asm.properties $(DIR_BIN)\asn1.properties \
-$(DIR_BIN)\au3.properties $(DIR_BIN)\ave.properties $(DIR_BIN)\avs.properties \
-$(DIR_BIN)\baan.properties $(DIR_BIN)\blitzbasic.properties \
-$(DIR_BIN)\bullant.properties $(DIR_BIN)\caml.properties \
-$(DIR_BIN)\cil.properties $(DIR_BIN)\cmake.properties \
-$(DIR_BIN)\cobol.properties $(DIR_BIN)\coffeescript.properties \
-$(DIR_BIN)\conf.properties $(DIR_BIN)\cpp.properties \
-$(DIR_BIN)\csound.properties $(DIR_BIN)\css.properties $(DIR_BIN)\d.properties \
+$(DIR_BIN)\asciidoc.properties $(DIR_BIN)\asl.properties \
+$(DIR_BIN)\asm.properties $(DIR_BIN)\asn1.properties $(DIR_BIN)\au3.properties \
+$(DIR_BIN)\ave.properties $(DIR_BIN)\avs.properties $(DIR_BIN)\baan.properties \
+$(DIR_BIN)\blitzbasic.properties $(DIR_BIN)\bullant.properties \
+$(DIR_BIN)\caml.properties $(DIR_BIN)\cil.properties \
+$(DIR_BIN)\cmake.properties $(DIR_BIN)\cobol.properties \
+$(DIR_BIN)\coffeescript.properties $(DIR_BIN)\conf.properties \
+$(DIR_BIN)\cpp.properties $(DIR_BIN)\csound.properties \
+$(DIR_BIN)\css.properties $(DIR_BIN)\d.properties \
 $(DIR_BIN)\dataflex.properties $(DIR_BIN)\ecl.properties \
 $(DIR_BIN)\eiffel.properties $(DIR_BIN)\erlang.properties \
 $(DIR_BIN)\escript.properties $(DIR_BIN)\flagship.properties \
 $(DIR_BIN)\forth.properties $(DIR_BIN)\fortran.properties \
 $(DIR_BIN)\freebasic.properties $(DIR_BIN)\fsharp.properties \
 $(DIR_BIN)\gap.properties $(DIR_BIN)\haskell.properties \
-$(DIR_BIN)\hex.properties $(DIR_BIN)\html.properties \
-$(DIR_BIN)\inno.properties $(DIR_BIN)\json.properties \
-$(DIR_BIN)\kix.properties $(DIR_BIN)\latex.properties \
-$(DIR_BIN)\lisp.properties $(DIR_BIN)\lot.properties \
-$(DIR_BIN)\lout.properties $(DIR_BIN)\lua.properties \
+$(DIR_BIN)\hex.properties $(DIR_BIN)\hollywood.properties \
+$(DIR_BIN)\html.properties $(DIR_BIN)\inno.properties \
+$(DIR_BIN)\json.properties $(DIR_BIN)\kix.properties \
+$(DIR_BIN)\latex.properties $(DIR_BIN)\lisp.properties \
+$(DIR_BIN)\lot.properties $(DIR_BIN)\lout.properties $(DIR_BIN)\lua.properties \
 $(DIR_BIN)\markdown.properties $(DIR_BIN)\matlab.properties \
 $(DIR_BIN)\maxima.properties $(DIR_BIN)\metapost.properties \
 $(DIR_BIN)\mmixal.properties $(DIR_BIN)\modula3.properties \
-$(DIR_BIN)\nim.properties $(DIR_BIN)\nimrod.properties \
-$(DIR_BIN)\nncrontab.properties $(DIR_BIN)\nsis.properties \
-$(DIR_BIN)\opal.properties $(DIR_BIN)\oscript.properties \
-$(DIR_BIN)\others.properties $(DIR_BIN)\pascal.properties \
-$(DIR_BIN)\perl.properties $(DIR_BIN)\pov.properties \
-$(DIR_BIN)\powerpro.properties $(DIR_BIN)\powershell.properties \
-$(DIR_BIN)\ps.properties $(DIR_BIN)\purebasic.properties \
-$(DIR_BIN)\python.properties $(DIR_BIN)\r.properties \
-$(DIR_BIN)\raku.properties $(DIR_BIN)\rebol.properties \
+$(DIR_BIN)\nim.properties $(DIR_BIN)\nncrontab.properties \
+$(DIR_BIN)\nsis.properties $(DIR_BIN)\opal.properties \
+$(DIR_BIN)\oscript.properties $(DIR_BIN)\others.properties \
+$(DIR_BIN)\pascal.properties $(DIR_BIN)\perl.properties \
+$(DIR_BIN)\pov.properties $(DIR_BIN)\powerpro.properties \
+$(DIR_BIN)\powershell.properties $(DIR_BIN)\ps.properties \
+$(DIR_BIN)\purebasic.properties $(DIR_BIN)\python.properties \
+$(DIR_BIN)\r.properties $(DIR_BIN)\raku.properties $(DIR_BIN)\rebol.properties \
 $(DIR_BIN)\registry.properties $(DIR_BIN)\ruby.properties \
 $(DIR_BIN)\rust.properties $(DIR_BIN)\sas.properties \
 $(DIR_BIN)\scriptol.properties $(DIR_BIN)\smalltalk.properties \
@@ -241,7 +242,7 @@ Sc1.obj: SciTEWin.cxx
 
 !IF EXISTS(nmdeps.mak)
 
-# Protect with !IF EXISTS to handle accidental deletion - just 'nmake -f scite.mak deps'
+# Protect with !IF EXISTS to handle accidental deletion - just 'nmake -f scite.mak depend'
 
 !INCLUDE nmdeps.mak
 

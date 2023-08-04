@@ -38,18 +38,14 @@
 
 #include <sys/stat.h>
 
-#ifdef __MINGW_H
-#define _WIN32_IE	0x0400
-#endif
-
 #undef _WIN32_WINNT
 #undef WINVER
 #ifdef WIN_TARGET
 #define _WIN32_WINNT WIN_TARGET
 #define WINVER WIN_TARGET
 #else
-#define _WIN32_WINNT  0x0501
-#define WINVER 0x0501
+#define _WIN32_WINNT  0x0A00
+#define WINVER 0x0A00
 #endif
 #undef NOMINMAX
 #define NOMINMAX 1
@@ -76,6 +72,7 @@ typedef void *HTHEME;
 #include "ScintillaTypes.h"
 #include "ScintillaMessages.h"
 #include "ScintillaCall.h"
+#include "ScintillaStructures.h"
 
 #include "Scintilla.h"
 #include "Lexilla.h"
@@ -262,10 +259,10 @@ protected:
 	void LocaliseDialog(HWND wDialog);
 
 	int DoDialog(const TCHAR *resName, DLGPROC lpProc);
-	HWND CreateParameterisedDialog(LPCWSTR lpTemplateName, DLGPROC lpProc);
-	GUI::gui_string DialogFilterFromProperty(const GUI::gui_char *filterProperty);
+	HWND CreateParameterisedDialog(LPCWSTR lpTemplateName, DLGPROC lpProc) noexcept;
+	GUI::gui_string DialogFilterFromProperty(const GUI::gui_string &filterProperty);
 	void CheckCommonDialogError();
-	bool OpenDialog(const FilePath &directory, const GUI::gui_char *filesFilter) override;
+	bool OpenDialog(const FilePath &directory, const GUI::gui_string &filesFilter) override;
 	FilePath ChooseSaveName(const FilePath &directory, const char *title,
 				const GUI::gui_char *filesFilter = nullptr, const char *ext = nullptr);
 	bool SaveAsDialog() override;
@@ -277,7 +274,7 @@ protected:
 	void SaveAsXML() override;
 	void LoadSessionDialog() override;
 	void SaveSessionDialog() override;
-	bool PreOpenCheck(const GUI::gui_char *arg) override;
+	bool PreOpenCheck(const GUI::gui_string &file) override;
 	bool IsStdinBlocked() override;
 
 	/// Print the current buffer.
@@ -296,7 +293,7 @@ protected:
 	void SettingChanged(WPARAM wParam, LPARAM lParam);
 	void SysColourChanged(WPARAM wParam, LPARAM lParam);
 	void ScaleChanged(WPARAM wParam, LPARAM lParam);
-	static GUI::gui_string ProcessArgs(const GUI::gui_char *cmdLine);
+	static std::vector<GUI::gui_string> ProcessArgs(GUI::gui_string_view cmdLine);
 	void QuitProgram() override;
 
 	FilePath GetDefaultDirectory() override;
@@ -400,12 +397,13 @@ public:
 	void OutputAppendEncodedStringSynchronised(const GUI::gui_string &s, int codePageDocument);
 	void ResetExecution();
 	void ExecuteNext();
+	void ExecuteGrep(const Job &jobToRun);
 	DWORD ExecuteOne(const Job &jobToRun);
 	void ProcessExecute();
-	void ShellExec(const std::string &cmd, const char *dir);
+	void ShellExec(std::string_view cmd, std::string_view dir);
 	void Execute() override;
 	void StopExecute() override;
-	void AddCommand(const std::string &cmd, const std::string &dir, JobSubsystem jobType, const std::string &input = "", int flags = 0) override;
+	void AddCommand(std::string_view cmd, std::string_view dir, JobSubsystem jobType, std::string_view input = "", int flags = 0) override;
 
 	void PostOnMainThread(int cmd, Worker *pWorker) override;
 	void WorkerCommand(int cmd, Worker *pWorker) override;

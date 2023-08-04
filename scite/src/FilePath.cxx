@@ -14,6 +14,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <set>
 #include <algorithm>
 #include <memory>
 #include <chrono>
@@ -24,6 +25,7 @@
 
 #include <unistd.h>
 #include <dirent.h>
+#include <pwd.h>
 
 #endif
 
@@ -34,7 +36,7 @@
 #include <io.h>
 
 #undef _WIN32_WINNT
-#define _WIN32_WINNT  0x0602
+#define _WIN32_WINNT  0x0A00
 #include <windows.h>
 #include <commctrl.h>
 
@@ -44,6 +46,7 @@
 #endif
 
 #include "GUI.h"
+#include "StringHelpers.h"
 
 #include "FilePath.h"
 
@@ -72,6 +75,8 @@ const GUI::gui_char parentDirectory[] = GUI_TEXT("..");
 FilePath::FilePath() noexcept = default;
 
 FilePath::FilePath(const GUI::gui_char *fileName_) : fileName(fileName_ ? fileName_ : GUI_TEXT("")) {}
+
+FilePath::FilePath(const GUI::gui_string_view fileName_) : fileName(fileName_) {}
 
 FilePath::FilePath(const GUI::gui_string &fileName_) : fileName(fileName_) {}
 
@@ -107,25 +112,39 @@ void FilePath::Init() noexcept {
 	fileName.clear();
 }
 
+#ifdef _WIN32
+
+namespace {
+
+// Encapsulate Win32 CompareStringW
+[[nodiscard]] int Compare(const GUI::gui_string &a, const GUI::gui_string &b) noexcept {
+	return ::CompareStringW(LOCALE_SYSTEM_DEFAULT, NORM_IGNORECASE,
+		a.c_str(), static_cast<int>(a.length()),
+		b.c_str(), static_cast<int>(b.length()));
+}
+
+}
+
+#endif
+
 bool FilePath::operator==(const FilePath &other) const noexcept {
 	return SameNameAs(other);
 }
 
 bool FilePath::operator<(const FilePath &other) const noexcept {
-	return fileName < other.fileName;
-}
-
-bool FilePath::SameNameAs(const GUI::gui_char *other) const noexcept {
-#ifdef WIN32
-	return CSTR_EQUAL == CompareString(LOCALE_SYSTEM_DEFAULT, NORM_IGNORECASE,
-					   fileName.c_str(), -1, other, -1);
+#ifdef _WIN32
+	return CSTR_LESS_THAN == Compare(fileName, other.fileName);
 #else
-	return fileName == other;
+	return fileName < other.fileName;
 #endif
 }
 
 bool FilePath::SameNameAs(const FilePath &other) const noexcept {
-	return SameNameAs(other.fileName.c_str());
+#ifdef _WIN32
+	return CSTR_EQUAL == Compare(fileName, other.fileName);
+#else
+	return fileName == other.fileName;
+#endif
 }
 
 bool FilePath::IsSet() const noexcept {
@@ -154,8 +173,15 @@ bool FilePath::IsAbsolute() const noexcept {
 
 bool FilePath::IsRoot() const noexcept {
 #ifdef WIN32
-	if ((fileName[0] == pathSepChar) && (fileName[1] == pathSepChar) && (fileName.find(pathSepString, 2) == GUI::gui_string::npos))
-		return true; // UNC path like \\server
+	if (fileName.length() >= 2 && (fileName[0] == pathSepChar) && (fileName[1] == pathSepChar)) {
+		// Starts with "\\" so could be UNC \\server or \\server\share
+		const size_t posSep = fileName.find(pathSepChar, 2);
+		if (posSep == GUI::gui_string::npos)
+			return true; // No \ after initial \\, UNC path like \\server
+		const size_t posSepLast = fileName.rfind(pathSepChar);
+		// Possibly UNC share like \\server\share - only 1 pathSepChar after \\ at start
+		return posSepLast == posSep;
+	}
 	return (fileName.length() == 3) && (fileName[1] == ':') && (fileName[2] == pathSepChar);
 #else
 	return fileName == "/";
@@ -213,7 +239,7 @@ FilePath FilePath::Extension() const {
 
 FilePath FilePath::Directory() const {
 	if (IsRoot()) {
-		return FilePath(fileName.c_str());
+		return FilePath(fileName);
 	} else {
 		size_t lenDirectory = fileName.rfind(pathSepChar);
 		if (lenDirectory != GUI::gui_string::npos) {
@@ -227,42 +253,48 @@ FilePath FilePath::Directory() const {
 	}
 }
 
-#ifdef _WIN32
+namespace {
+
+// The stat struct is named differently on Win32 and Unix.
+#if defined(_WIN32)
+#if defined(_MSC_VER)
+typedef struct _stat64i32 FileStatus;
+#else
+typedef struct _stat FileStatus;
+#endif
+#else
+// Unix
+typedef struct stat FileStatus;
+#endif
+
+#if defined(_WIN32)
 
 // Substitute functions that take wchar_t arguments but have the same name
 // as char functions so that the compiler will choose the right form.
 
-static size_t strlen(const wchar_t *str) noexcept {
-	return wcslen(str);
-}
-
-static int chdir(const wchar_t *dirname) noexcept {
+int chdir(const wchar_t *dirname) noexcept {
 	return _wchdir(dirname);
 }
 
-static FILE *fopen(const wchar_t *filename, const wchar_t *mode) noexcept {
+FILE *fopen(const wchar_t *filename, const wchar_t *mode) noexcept {
 	return _wfopen(filename, mode);
 }
 
-static int unlink(const wchar_t *filename) noexcept {
+int unlink(const wchar_t *filename) noexcept {
 	return _wunlink(filename);
 }
 
-static int access(const wchar_t *path, int mode) noexcept {
+int access(const wchar_t *path, int mode) noexcept {
 	return _waccess(path, mode);
 }
 
-#if defined(_MSC_VER)
-static int stat(const wchar_t *path, struct _stat64i32 *buffer) noexcept {
+int stat(const wchar_t *path, FileStatus *buffer) noexcept {
 	return _wstat(path, buffer);
 }
-#else
-static int stat(const wchar_t *path, struct _stat *buffer) noexcept {
-	return _wstat(path, buffer);
-}
-#endif
 
 #endif
+
+}
 
 FilePath FilePath::NormalizePath() const {
 	if (fileName.empty()) {
@@ -312,6 +344,19 @@ FilePath FilePath::NormalizePath() const {
 	return FilePath(absPathString);
 }
 
+GUI::gui_string FilePath::RelativePathTo(FilePath filePath) const {
+	// Only handles simple case where filePath is in this directory or a subdirectory
+	GUI::gui_string relPath = filePath.fileName;
+	if (!fileName.empty() && StartsWith(relPath, fileName)) {
+		relPath = relPath.substr(fileName.length());
+		if (!relPath.empty()) {
+			// Remove directory separator
+			relPath.erase(0, 1);
+		}
+	}
+	return relPath;
+}
+
 /**
  * Take a filename or relative path and put it at the end of the current path.
  * If the path is absolute, return the same path.
@@ -342,6 +387,10 @@ FilePath FilePath::GetWorkingDirectory() {
 #endif
 	if (pdir) {
 		GUI::gui_string gswd(pdir);
+#if defined(_MSC_VER)
+// free is the only way to return the memory from getcwd
+#pragma warning(suppress: 26408)
+#endif
 		free(pdir);
 		// In Windows, getcwd returns a trailing backslash
 		// when the CWD is at the root of a disk, so remove it
@@ -355,6 +404,21 @@ FilePath FilePath::GetWorkingDirectory() {
 
 bool FilePath::SetWorkingDirectory() const noexcept {
 	return chdir(AsInternal()) == 0;
+}
+
+FilePath FilePath::UserHomeDirectory() {
+#if defined(_WIN32)
+	return _wgetenv(GUI_TEXT("USERPROFILE"));
+#elif defined (__APPLE__)
+	// Normally sandboxed so $HOME points to sandbox directory not user home
+	struct passwd *pw = getpwuid(getuid());
+	if (!pw) {
+		return {};
+	}
+	return pw->pw_dir;
+#else
+	return getenv("HOME");
+#endif
 }
 
 void FilePath::List(FilePathSet &directories, FilePathSet &files) const {
@@ -414,10 +478,10 @@ FILE *FilePath::Open(const GUI::gui_char *mode) const noexcept {
 	}
 }
 
-/// Size of block for file reading.
-static constexpr size_t readBlockSize = 64 * 1024;
-
 std::string FilePath::Read() const {
+	/// Size of block for file reading.
+	constexpr size_t readBlockSize = 64 * 1024;
+
 	std::string data;
 	FileHolder fp(Open(fileRead));
 	if (fp) {
@@ -445,15 +509,7 @@ time_t FilePath::ModifiedTime() const noexcept {
 		return 0;
 	if (access(AsInternal(), R_OK) == -1)
 		return 0;
-#ifdef _WIN32
-#if defined(_MSC_VER)
-	struct _stat64i32 statusFile;
-#else
-	struct _stat statusFile;
-#endif
-#else
-	struct stat statusFile;
-#endif
+	FileStatus statusFile;
 	if (stat(AsInternal(), &statusFile) != -1)
 		return statusFile.st_mtime;
 	else
@@ -485,15 +541,7 @@ bool FilePath::Exists() const noexcept {
 }
 
 bool FilePath::IsDirectory() const noexcept {
-#ifdef _WIN32
-#if defined(_MSC_VER)
-	struct _stat64i32 statusFile;
-#else
-	struct _stat statusFile;
-#endif
-#else
-	struct stat statusFile;
-#endif
+	FileStatus statusFile;
 	if (stat(AsInternal(), &statusFile) != -1)
 #ifdef WIN32
 		return (statusFile.st_mode & _S_IFDIR) != 0;
@@ -548,26 +596,36 @@ bool PatternMatch(GUI::gui_string_view pattern, GUI::gui_string_view text) {
 
 }
 
-bool FilePath::Matches(const GUI::gui_char *pattern) const {
+bool FilePath::Matches(GUI::gui_string_view pattern) const {
 	GUI::gui_string pat(pattern);
 	GUI::gui_string nameCopy(Name().fileName);
 #ifdef _WIN32
 	Lowercase(pat);
 	Lowercase(nameCopy);
 #endif
-	std::replace(pat.begin(), pat.end(), ' ', '\0');
-	size_t start = 0;
-	while (start < pat.length()) {
-		const GUI::gui_char *patElement = pat.c_str() + start;
+	GUI::gui_string_view patView(pat);
+	while (!patView.empty()) {
+		const size_t separator = patView.find_first_of(' ');
+		const GUI::gui_string_view patElement(patView.substr(0, separator));
 		if (PatternMatch(patElement, nameCopy)) {
 			return true;
 		}
-		start += strlen(patElement) + 1;
+		if (separator == std::string::npos) {
+			break;
+		}
+		patView.remove_prefix(separator + 1);
 	}
 	return false;
 }
 
 #ifdef WIN32
+
+namespace {
+
+typedef DWORD(STDAPICALLTYPE *GetLongSig)(const GUI::gui_char *lpszShortPath, GUI::gui_char *lpszLongPath, DWORD cchBuffer);
+GetLongSig pfnGetLong = nullptr;
+bool kernelTried = false;
+
 /**
  * Makes a long path from a given, possibly short path/file.
  *
@@ -577,13 +635,10 @@ bool FilePath::Matches(const GUI::gui_char *pattern) const {
  * @returns true on success, and the long path in @a longPath,
  * false on failure.
  */
-static bool MakeLongPath(const GUI::gui_char *shortPath, GUI::gui_string &longPath) {
+bool MakeLongPath(const GUI::gui_char *shortPath, GUI::gui_string &longPath) {
 	if (!*shortPath) {
 		return false;
 	}
-	typedef DWORD (STDAPICALLTYPE* GetLongSig)(const GUI::gui_char* lpszShortPath, GUI::gui_char* lpszLongPath, DWORD cchBuffer);
-	static GetLongSig pfnGetLong = nullptr;
-	static bool kernelTried = false;
 
 	if (!kernelTried) {
 		kernelTried = true;
@@ -612,6 +667,9 @@ static bool MakeLongPath(const GUI::gui_char *shortPath, GUI::gui_string &longPa
 	}
 	return characters != 0;
 }
+
+}
+
 #endif
 
 void FilePath::FixName() {

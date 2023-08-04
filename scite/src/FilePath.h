@@ -35,6 +35,7 @@ class FilePath {
 public:
 	FilePath() noexcept;
 	FilePath(const GUI::gui_char *fileName_);
+	FilePath(const GUI::gui_string_view fileName_);
 	FilePath(const GUI::gui_string &fileName_);
 	FilePath(FilePath const &directory, FilePath const &name);
 	FilePath(FilePath const &) = default;
@@ -48,8 +49,7 @@ public:
 	void Set(FilePath const &directory, FilePath const &name);
 	void SetDirectory(FilePath const &directory);
 	virtual void Init() noexcept;
-	bool SameNameAs(const GUI::gui_char *other) const noexcept;
-	bool SameNameAs(const FilePath &other) const noexcept;
+	[[nodiscard]]bool SameNameAs(const FilePath &other) const noexcept;
 	bool operator==(const FilePath &other) const noexcept;
 	bool operator<(const FilePath &other) const noexcept;
 	bool IsSet() const noexcept;
@@ -66,8 +66,10 @@ public:
 	void FixName();
 	FilePath AbsolutePath() const;
 	FilePath NormalizePath() const;
+	GUI::gui_string RelativePathTo(FilePath filePath) const;
 	static FilePath GetWorkingDirectory();
 	bool SetWorkingDirectory() const noexcept;
+	static FilePath UserHomeDirectory();
 	void List(FilePathSet &directories, FilePathSet &files) const;
 	FILE *Open(const GUI::gui_char *mode) const noexcept;
 	std::string Read() const;
@@ -76,7 +78,7 @@ public:
 	long long GetFileLength() const noexcept;
 	bool Exists() const noexcept;
 	bool IsDirectory() const noexcept;
-	bool Matches(const GUI::gui_char *pattern) const;
+	bool Matches(GUI::gui_string_view pattern) const;
 	static bool CaseSensitive() noexcept;
 };
 

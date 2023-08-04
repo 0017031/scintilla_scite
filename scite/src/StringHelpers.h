@@ -59,6 +59,10 @@ constexpr bool IsASpace(int ch) noexcept {
 	return (ch == ' ') || ((ch >= 0x09) && (ch <= 0x0d));
 }
 
+constexpr bool IsSpaceOrTab(int ch) noexcept {
+	return (ch == ' ') || (ch == '\t');
+}
+
 constexpr bool IsADigit(int ch) noexcept {
 	return (ch >= '0') && (ch <= '9');
 }
@@ -68,6 +72,10 @@ constexpr bool IsAHexDigit(int ch) noexcept {
 		((ch >= '0') && (ch <= '9')) ||
 		((ch >= 'a') && (ch <= 'f')) ||
 		((ch >= 'A') && (ch <= 'F'));
+}
+
+constexpr bool IsUpperCase(int ch) noexcept {
+	return (ch >= 'A') && (ch <= 'Z');
 }
 
 constexpr bool IsAlphabetic(int ch) noexcept {
@@ -100,6 +108,8 @@ std::vector<T> StringSplit(const T &text, int separator) {
 inline std::vector<GUI::gui_string> ListFromString(const GUI::gui_string &args) {
 	return StringSplit(args, '\n');
 }
+
+std::set<std::string> SetFromString(std::string_view text, char separator);
 
 typedef std::tuple<std::string_view, std::string_view> ViewPair;
 
@@ -138,9 +148,9 @@ unsigned int UTF32Character(const char *utf8) noexcept;
 std::string UTF8FromUTF32(unsigned int uch);
 
 std::string Slash(const std::string &s, bool quoteQuotes);
-unsigned int UnSlash(char *s) noexcept;
-std::string UnSlashString(const char *s);
-std::string UnSlashLowOctalString(const char *s);
+size_t UnSlash(char *s) noexcept;
+std::string UnSlashString(std::string_view sv);
+std::string UnSlashLowOctalString(std::string_view sv);
 
 unsigned int IntFromHexDigit(int ch) noexcept;
 bool AllBytesHex(std::string_view hexBytes) noexcept;
@@ -162,9 +172,9 @@ constexpr size_t comboMemorySize = 10;
 class ComboMemory {
 	size_t sz;
 	std::vector<std::string> entries;
-	bool Present(const std::string_view sv) const noexcept;
+	bool Present(std::string_view sv) const noexcept;
 public:
-	ComboMemory(size_t sz_=comboMemorySize);
+	explicit ComboMemory(size_t sz_=comboMemorySize);
 	void Insert(std::string_view item);
 	void InsertDeletePrefix(std::string_view item);
 	void Append(std::string_view item);

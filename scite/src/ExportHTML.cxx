@@ -139,7 +139,7 @@ void SciTEBase::SaveToHTML(const FilePath &saveName) {
 		}
 
 		std::string sval = props.GetExpandedString("font.monospace");
-		StyleDefinition sdmono(sval.c_str());
+		StyleDefinition sdmono(sval);
 
 		for (int istyle = 0; istyle <= StyleMax; istyle++) {
 			if ((istyle > StyleDefault) && (istyle <= StyleLastPredefined))
@@ -157,7 +157,11 @@ void SciTEBase::SaveToHTML(const FilePath &saveName) {
 
 				if (sd.specified != StyleDefinition::sdNone) {
 					if (istyle == StyleDefault) {
-						fprintf(fp, "span {\n");
+						if (wysiwyg) {
+							fprintf(fp, "span {\n");
+						} else {
+							fprintf(fp, "pre {\n");
+						}
 					} else {
 						fprintf(fp, ".S%0d {\n", istyle);
 					}

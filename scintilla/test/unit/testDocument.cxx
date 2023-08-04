@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <string_view>
 #include <vector>
+#include <set>
 #include <optional>
 #include <algorithm>
 #include <memory>
@@ -95,14 +96,12 @@ struct DocPlus {
 			// This case folder will not handle many DBCS cases. Scintilla uses platform-specific code for DBCS
 			// case folding which can not easily be inserted in platform-independent tests.
 			std::unique_ptr<CaseFolderTable> pcft = std::make_unique<CaseFolderTable>();
-			pcft->StandardASCII();
 			document.SetCaseFolder(std::move(pcft));
 		}
 	}
 
 	void SetSBCSFoldings(const Folding *foldings, size_t length) {
 		std::unique_ptr<CaseFolderTable> pcft = std::make_unique<CaseFolderTable>();
-		pcft->StandardASCII();
 		for (size_t block = 0; block < length; block++) {
 			for (int fold = 0; fold < foldings[block].length; fold++) {
 				pcft->SetTranslation(foldings[block].from + fold, foldings[block].to + fold);
@@ -484,5 +483,191 @@ TEST_CASE("Words") {
 		const DocPlus docEndSpace(" a c ", 0);
 		REQUIRE(!docEndSpace.document.IsWordAt(0, 2));
 		REQUIRE(!docEndSpace.document.IsWordAt(3, 5));
+	}
+}
+
+TEST_CASE("SafeSegment") {
+	SECTION("Short") {
+		const DocPlus doc("", 0);
+		// all encoding: break before or after last space
+		const std::string_view text = "12 ";
+		size_t length = doc.document.SafeSegment(text);
+		REQUIRE(length <= text.length());
+		REQUIRE(text[length - 1] == '2');
+		REQUIRE(text[length] == ' ');
+	}
+
+	SECTION("ASCII") {
+		const DocPlus doc("", 0);
+		// all encoding: break before or after last space
+		std::string_view text = "12 3 \t45";
+		size_t length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == ' ');
+		REQUIRE(text[length] == '\t');
+
+		// UTF-8 and ASCII: word and punctuation boundary in middle of text
+		text = "(IsBreakSpace(text[j]))";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == 'j');
+		REQUIRE(text[length] == ']');
+
+		// UTF-8 and ASCII: word and punctuation boundary near start of text
+		text = "(IsBreakSpace";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == '(');
+		REQUIRE(text[length] == 'I');
+
+		// UTF-8 and ASCII: word and punctuation boundary near end of text
+		text = "IsBreakSpace)";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == 'e');
+		REQUIRE(text[length] == ')');
+
+		// break before last character
+		text = "JapaneseJa";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == 'J');
+		REQUIRE(text[length] == 'a');
+	}
+
+	SECTION("UTF-8") {
+		const DocPlus doc("", CpUtf8);
+		// break before last character: no trail byte
+		std::string_view text = "JapaneseJa";
+		size_t length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == 'J');
+		REQUIRE(text[length] == 'a');
+
+		// break before last character: 1 trail byte
+		text = "Japanese\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e\xc2\xa9";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == '\x9e');
+		REQUIRE(text[length] == '\xc2');
+
+		// break before last character: 2 trail bytes
+		text = "Japanese\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == '\xac');
+		REQUIRE(text[length] == '\xe8');
+
+		// break before last character: 3 trail bytes
+		text = "Japanese\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e\xf0\x9f\x98\x8a";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == '\x9e');
+		REQUIRE(text[length] == '\xf0');
+	}
+
+	SECTION("DBCS Shift-JIS") {
+		const DocPlus doc("", 932);
+		// word and punctuation boundary in middle of text: single byte
+		std::string_view text = "(IsBreakSpace(text[j]))";
+		size_t length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == 'j');
+		REQUIRE(text[length] == ']');
+
+		// word and punctuation boundary in middle of text: double byte
+		text = "(IsBreakSpace(text[\x8c\xea]))";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == '\xea');
+		REQUIRE(text[length] == ']');
+
+		// word and punctuation boundary near start of text
+		text = "(IsBreakSpace";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == '(');
+		REQUIRE(text[length] == 'I');
+
+		// word and punctuation boundary near end of text: single byte
+		text = "IsBreakSpace)";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == 'e');
+		REQUIRE(text[length] == ')');
+
+		// word and punctuation boundary near end of text: double byte
+		text = "IsBreakSpace\x8c\xea)";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == '\xea');
+		REQUIRE(text[length] == ')');
+
+		// break before last character: single byte
+		text = "JapaneseJa";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == 'J');
+		REQUIRE(text[length] == 'a');
+
+		// break before last character: double byte
+		text = "Japanese\x93\xfa\x96\x7b\x8c\xea";
+		length = doc.document.SafeSegment(text);
+		REQUIRE(text[length - 1] == '\x7b');
+		REQUIRE(text[length] == '\x8c');
+	}
+}
+
+TEST_CASE("PerLine") {
+	SECTION("LineMarkers") {
+		DocPlus doc("1\n2\n", CpUtf8);
+		REQUIRE(doc.document.LinesTotal() == 3);
+		const int mh1 = doc.document.AddMark(0, 0);
+		const int mh2 = doc.document.AddMark(1, 1);
+		const int mh3 = doc.document.AddMark(2, 2);
+		REQUIRE(mh1 != -1);
+		REQUIRE(mh2 != -1);
+		REQUIRE(mh3 != -1);
+		REQUIRE(doc.document.AddMark(3, 3) == -1);
+
+		// delete first character, no change
+		REQUIRE(doc.document.CharAt(0) == '1');
+		doc.document.DeleteChars(0, 1);
+		REQUIRE(doc.document.LinesTotal() == 3);
+		REQUIRE(doc.document.MarkerHandleFromLine(0, 0) == mh1);
+		REQUIRE(doc.document.MarkerHandleFromLine(0, 1) == -1);
+		REQUIRE(doc.document.MarkerHandleFromLine(1, 0) == mh2);
+		REQUIRE(doc.document.MarkerHandleFromLine(1, 1) == -1);
+
+		// delete first line, so merged
+		REQUIRE(doc.document.CharAt(0) == '\n');
+		doc.document.DeleteChars(0, 1);
+		REQUIRE(doc.document.CharAt(0) == '2');
+		const std::set handleSet {mh1, mh2};
+		const int handle1 = doc.document.MarkerHandleFromLine(0, 0);
+		const int handle2 = doc.document.MarkerHandleFromLine(0, 1);
+		REQUIRE(handle1 != handle2);
+		REQUIRE(handleSet.count(handle1) == 1);
+		REQUIRE(handleSet.count(handle2) == 1);
+		REQUIRE(doc.document.MarkerHandleFromLine(0, 2) == -1);
+		REQUIRE(doc.document.MarkerHandleFromLine(1, 0) == mh3);
+		REQUIRE(doc.document.MarkerHandleFromLine(1, 1) == -1);
+	}
+
+	SECTION("LineAnnotation") {
+		DocPlus doc("1\n2\n", CpUtf8);
+		REQUIRE(doc.document.LinesTotal() == 3);
+		Sci::Position length = doc.document.Length();
+		doc.document.AnnotationSetText(0, "1");
+		doc.document.AnnotationSetText(1, "1\n2");
+		doc.document.AnnotationSetText(2, "1\n2\n3");
+		REQUIRE(doc.document.AnnotationLines(0) == 1);
+		REQUIRE(doc.document.AnnotationLines(1) == 2);
+		REQUIRE(doc.document.AnnotationLines(2) == 3);
+		REQUIRE(doc.document.AnnotationLines(3) == 0);
+
+		// delete last line
+		length -= 1;
+		doc.document.DeleteChars(length, 1);
+		// Deleting the last line moves its 3-line annotation to previous line,
+		// deleting the 2-line annotation of the previous line.
+		REQUIRE(doc.document.LinesTotal() == 2);
+		REQUIRE(doc.document.AnnotationLines(0) == 1);
+		REQUIRE(doc.document.AnnotationLines(1) == 3);
+		REQUIRE(doc.document.AnnotationLines(2) == 0);
+
+		// delete last character, no change
+		length -= 1;
+		REQUIRE(doc.document.CharAt(length) == '2');
+		doc.document.DeleteChars(length, 1);
+		REQUIRE(doc.document.LinesTotal() == 2);
+		REQUIRE(doc.document.AnnotationLines(0) == 1);
+		REQUIRE(doc.document.AnnotationLines(1) == 3);
+		REQUIRE(doc.document.AnnotationLines(2) == 0);
 	}
 }

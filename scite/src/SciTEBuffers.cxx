@@ -89,11 +89,18 @@ void Buffer::Init() {
 	doc.reset();
 }
 
+void Buffer::SetTimeFromFile() {
+	fileModTime = file.ModifiedTime();
+	fileModLastAsk = fileModTime;
+	documentModTime = fileModTime;
+	failedSave = false;
+}
+
 void Buffer::DocumentModified() noexcept {
 	documentModTime = time(nullptr);
 }
 
-bool Buffer::NeedsSave(int delayBeforeSave) const {
+bool Buffer::NeedsSave(int delayBeforeSave) const  noexcept {
 	const time_t now = time(nullptr);
 	return now && documentModTime && isDirty && !pFileWorker && (now-documentModTime > delayBeforeSave) && !file.IsUntitled() && !failedSave;
 }
@@ -122,6 +129,33 @@ void Buffer::AbandonAutomaticSave() {
 	}
 }
 
+constexpr Buffer::FutureDo operator&(Buffer::FutureDo a, Buffer::FutureDo b) noexcept {
+	return static_cast<Buffer::FutureDo>(static_cast<int>(a) & static_cast<int>(b));
+}
+
+constexpr Buffer::FutureDo operator|(Buffer::FutureDo a, Buffer::FutureDo b) noexcept {
+	return static_cast<Buffer::FutureDo>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+constexpr Buffer::FutureDo operator~(Buffer::FutureDo a) noexcept {
+	return static_cast<Buffer::FutureDo>(~static_cast<int>(a));
+}
+
+void Buffer::ScheduleFinishSave() noexcept {
+	isDirty = false;
+	failedSave = false;
+	// Need to make writable and set save point when next receive focus.
+	futureDo = futureDo | FutureDo::finishSave;
+}
+
+bool Buffer::FinishSave() noexcept {
+	if ((futureDo & FutureDo::finishSave) != FutureDo::finishSave) {
+		return false;
+	}
+	futureDo = futureDo & ~(FutureDo::finishSave);
+	return true;
+}
+
 void Buffer::CancelLoad() {
 	// Complete any background loading
 	if (pFileWorker && pFileWorker->IsLoading()) {
@@ -133,7 +167,11 @@ void Buffer::CancelLoad() {
 
 BufferList::BufferList() : current(0), stackcurrent(0), stack(0), buffers(0), length(0), lengthVisible(0), initialised(false) {}
 
-void BufferList::Allocate(int maxSize) {
+BufferIndex BufferList::size() const noexcept {
+	return static_cast<BufferIndex>(buffers.size());
+}
+
+void BufferList::Allocate(BufferIndex maxSize) {
 	length = 1;
 	lengthVisible = 1;
 	current = 0;
@@ -142,7 +180,7 @@ void BufferList::Allocate(int maxSize) {
 	stack[0] = 0;
 }
 
-int BufferList::Add() {
+BufferIndex BufferList::Add() {
 	if (length < size()) {
 		length++;
 	}
@@ -154,28 +192,28 @@ int BufferList::Add() {
 	return lengthVisible - 1;
 }
 
-int BufferList::GetDocumentByWorker(const FileWorker *pFileWorker) const {
+BufferIndex BufferList::GetDocumentByWorker(const FileWorker *pFileWorker) const noexcept {
 	for (int i = 0; i < length; i++) {
 		if (buffers[i].pFileWorker.get() == pFileWorker) {
 			return i;
 		}
 	}
-	return -1;
+	return bufferInvalid;
 }
 
-int BufferList::GetDocumentByName(const FilePath &filename, bool excludeCurrent) {
+BufferIndex BufferList::GetDocumentByName(const FilePath &filename, bool excludeCurrent) const noexcept {
 	if (!filename.IsSet()) {
-		return -1;
+		return bufferInvalid;
 	}
-	for (int i = 0; i < length; i++) {
+	for (BufferIndex i = 0; i < length; i++) {
 		if ((!excludeCurrent || i != current) && buffers[i].file.SameNameAs(filename)) {
 			return i;
 		}
 	}
-	return -1;
+	return bufferInvalid;
 }
 
-void BufferList::RemoveInvisible(int index) {
+void BufferList::RemoveInvisible(BufferIndex index) {
 	assert(!GetVisible(index));
 	if (index == current) {
 		RemoveCurrent();
@@ -191,7 +229,7 @@ void BufferList::RemoveInvisible(int index) {
 void BufferList::RemoveCurrent() {
 	// Delete and move up to fill gap.
 	buffers[current].CompleteLoading();
-	for (int i = current; i < length - 1; i++) {
+	for (BufferIndex i = current; i < length - 1; i++) {
 		buffers[i] = std::move(buffers[i + 1]);
 	}
 
@@ -215,25 +253,25 @@ void BufferList::RemoveCurrent() {
 	MoveToStackTop(current);
 }
 
-int BufferList::Current() const noexcept {
+BufferIndex BufferList::Current() const noexcept {
 	return current;
 }
 
-Buffer *BufferList::CurrentBuffer() {
+Buffer *BufferList::CurrentBuffer() noexcept {
 	return &buffers[Current()];
 }
 
-const Buffer *BufferList::CurrentBufferConst() const {
+const Buffer *BufferList::CurrentBufferConst() const noexcept {
 	return &buffers[Current()];
 }
 
-void BufferList::SetCurrent(int index) noexcept {
+void BufferList::SetCurrent(BufferIndex index) noexcept {
 	current = index;
 }
 
 void BufferList::PopStack() {
-	for (int i = 0; i < length - 1; ++i) {
-		int index = stack[i + 1];
+	for (BufferIndex i = 0; i < length - 1; ++i) {
+		BufferIndex index = stack[i + 1];
 		// adjust the index for items that will move in buffers[]
 		if (index > current)
 			--index;
@@ -241,22 +279,22 @@ void BufferList::PopStack() {
 	}
 }
 
-int BufferList::StackNext() {
+BufferIndex BufferList::StackNext() {
 	if (++stackcurrent >= length)
 		stackcurrent = 0;
 	return stack[stackcurrent];
 }
 
-int BufferList::StackPrev() {
+BufferIndex BufferList::StackPrev() {
 	if (--stackcurrent < 0)
 		stackcurrent = length - 1;
 	return stack[stackcurrent];
 }
 
-void BufferList::MoveToStackTop(int index) {
+void BufferList::MoveToStackTop(BufferIndex index) {
 	// shift top chunk of stack down into the slot that index occupies
 	bool move = false;
-	for (int i = length - 1; i > 0; --i) {
+	for (BufferIndex i = length - 1; i > 0; --i) {
 		if (stack[i] == index)
 			move = true;
 		if (move)
@@ -272,20 +310,19 @@ void BufferList::CommitStackSelection() {
 	stackcurrent = 0;
 }
 
-void BufferList::ShiftTo(int indexFrom, int indexTo) {
+void BufferList::ShiftTo(BufferIndex indexFrom, BufferIndex indexTo) {
 	// shift buffer to new place in buffers array
 	if (indexFrom == indexTo ||
 			indexFrom < 0 || indexFrom >= length ||
 			indexTo < 0 || indexTo >= length) return;
 	int step = (indexFrom > indexTo) ? -1 : 1;
 	Buffer tmp = std::move(buffers[indexFrom]);
-	int i;
-	for (i = indexFrom; i != indexTo; i += step) {
+	for (BufferIndex i = indexFrom; i != indexTo; i += step) {
 		buffers[i] = std::move(buffers[i+step]);
 	}
 	buffers[indexTo] = std::move(tmp);
 	// update stack indexes
-	for (i = 0; i < length; i++) {
+	for (BufferIndex i = 0; i < length; i++) {
 		if (stack[i] == indexFrom) {
 			stack[i] = indexTo;
 		} else if (step == 1) {
@@ -296,7 +333,7 @@ void BufferList::ShiftTo(int indexFrom, int indexTo) {
 	}
 }
 
-void BufferList::Swap(int indexA, int indexB) {
+void BufferList::Swap(BufferIndex indexA, BufferIndex indexB) {
 	// shift buffer to new place in buffers array
 	if (indexA == indexB ||
 			indexA < 0 || indexA >= length ||
@@ -348,11 +385,11 @@ bool BufferList::SavingInBackground() const {
 	return false;
 }
 
-bool BufferList::GetVisible(int index) const noexcept {
+bool BufferList::GetVisible(BufferIndex index) const noexcept {
 	return index < lengthVisible;
 }
 
-void BufferList::SetVisible(int index, bool visible) {
+void BufferList::SetVisible(BufferIndex index, bool visible) {
 	if (visible != GetVisible(index)) {
 		if (visible) {
 			if (index > lengthVisible) {
@@ -372,27 +409,7 @@ void BufferList::SetVisible(int index, bool visible) {
 	}
 }
 
-constexpr Buffer::FutureDo operator|(Buffer::FutureDo a, Buffer::FutureDo b) noexcept {
-	return static_cast<Buffer::FutureDo>(static_cast<int>(a) | static_cast<int>(b));
-}
-
-constexpr Buffer::FutureDo operator~(Buffer::FutureDo a) noexcept {
-	return static_cast<Buffer::FutureDo>(~static_cast<int>(a));
-}
-
-void BufferList::AddFuture(int index, Buffer::FutureDo fd) {
-	if (index >= 0 || index < length) {
-		buffers[index].futureDo = static_cast<Buffer::FutureDo>(buffers[index].futureDo | fd);
-	}
-}
-
-void BufferList::FinishedFuture(int index, Buffer::FutureDo fd) {
-	if (index >= 0 || index < length) {
-		buffers[index].futureDo = static_cast<Buffer::FutureDo>(buffers[index].futureDo & ~(fd));
-	}
-}
-
-void *SciTEBase::GetDocumentAt(int index) {
+void *SciTEBase::GetDocumentAt(BufferIndex index) {
 	if (index < 0 || index >= buffers.size()) {
 		return nullptr;
 	}
@@ -403,7 +420,7 @@ void *SciTEBase::GetDocumentAt(int index) {
 	return buffers.buffers[index].doc.get();
 }
 
-void SciTEBase::SwitchDocumentAt(int index, void *pdoc) {
+void SciTEBase::SwitchDocumentAt(BufferIndex index, void *pdoc) {
 	if (index < 0 || index >= buffers.size()) {
 		return;
 	}
@@ -413,8 +430,8 @@ void SciTEBase::SwitchDocumentAt(int index, void *pdoc) {
 	}
 }
 
-void SciTEBase::SetDocumentAt(int index, bool updateStack) {
-	const int currentbuf = buffers.Current();
+void SciTEBase::SetDocumentAt(BufferIndex index, bool updateStack) {
+	const BufferIndex currentbuf = buffers.Current();
 
 	if (index < 0 ||
 			index >= buffers.length ||
@@ -456,7 +473,7 @@ void SciTEBase::SetDocumentAt(int index, bool updateStack) {
 	if (lineNumbers && lineNumbersExpand)
 		SetLineNumberWidth();
 
-	DisplayAround(bufferNext.file);
+	DisplayAround(bufferNext.file.filePosition);
 	if (restoreBookmarks) {
 		// Restoring a session does not restore the scroll position
 		// so make the selection visible.
@@ -490,15 +507,13 @@ void SciTEBase::RestoreFolds(const std::vector<SA::Line> &folds) {
 }
 
 void SciTEBase::UpdateBuffersCurrent() {
-	const int currentbuf = buffers.Current();
+	const BufferIndex currentbuf = buffers.Current();
 
 	if ((buffers.length > 0) && (currentbuf >= 0) && (buffers.GetVisible(currentbuf))) {
 		Buffer &bufferCurrent = buffers.buffers[currentbuf];
 		bufferCurrent.file.Set(filePath);
 		if (bufferCurrent.lifeState != Buffer::LifeState::reading && bufferCurrent.lifeState != Buffer::LifeState::readAll) {
-			bufferCurrent.file.selection.position = wEditor.CurrentPos();
-			bufferCurrent.file.selection.anchor = wEditor.Anchor();
-			bufferCurrent.file.scrollPosition = GetCurrentScrollPosition();
+			bufferCurrent.file.filePosition = GetFilePosition();
 
 			// Retrieve fold state and store in buffer state info
 
@@ -580,7 +595,7 @@ FilePath SciTEBase::UserFilePath(const GUI::gui_char *name) {
 	return FilePath(GetSciteUserHome(), nameWithVisibility.c_str());
 }
 
-static std::string IndexPropKey(const char *bufPrefix, int bufIndex, const char *bufAppendix) {
+static std::string IndexPropKey(const char *bufPrefix, BufferIndex bufIndex, const char *bufAppendix) {
 	std::string pKey = bufPrefix;
 	pKey += '.';
 	pKey += StdStringFromInteger(bufIndex + 1);
@@ -602,22 +617,22 @@ void SciTEBase::LoadSessionFile(const GUI::gui_char *sessionName) {
 	propsSession.Clear();
 	propsSession.Read(sessionPathName, sessionPathName.Directory(), filter, nullptr, 0);
 
-	FilePath sessionFilePath = FilePath(sessionPathName).AbsolutePath();
+	const FilePath sessionFilePath = FilePath(sessionPathName).AbsolutePath();
 	// Add/update SessionPath environment variable
-	props.Set("SessionPath", sessionFilePath.AsUTF8().c_str());
+	props.SetPath("SessionPath", sessionFilePath);
 }
 
 void SciTEBase::RestoreRecentMenu() {
-	const SelectedRange sr(0, 0);
+	const FilePosition fp(SelectedRange(0, 0), 0);
 
 	DeleteFileStackMenu();
 
 	for (int i = 0; i < fileStackMax; i++) {
 		std::string propKey = IndexPropKey("mru", i, "path");
-		std::string propStr = propsSession.GetString(propKey.c_str());
+		std::string propStr = propsSession.GetString(propKey);
 		if (propStr == "")
 			continue;
-		AddFileToStack(RecentFile(GUI::StringFromUTF8(propStr), sr, 0));
+		AddFileToStack(RecentFile(GUI::StringFromUTF8(propStr), fp));
 	}
 }
 
@@ -658,7 +673,7 @@ std::string StringFromLines(const std::vector<SA::Line> &lines) {
 void SciTEBase::RestoreFromSession(const Session &session) {
 	for (const BufferState &buffer : session.buffers)
 		AddFileToBuffer(buffer);
-	const int iBuffer = buffers.GetDocumentByName(session.pathActive);
+	const BufferIndex iBuffer = buffers.GetDocumentByName(session.pathActive);
 	if (iBuffer >= 0)
 		SetDocumentAt(iBuffer);
 }
@@ -667,7 +682,7 @@ void SciTEBase::RestoreSession() {
 	if (props.GetInt("save.find") != 0) {
 		for (int i = 0;; i++) {
 			const std::string propKey = IndexPropKey("search", i, "findwhat");
-			const std::string propStr = propsSession.GetString(propKey.c_str());
+			const std::string_view propStr = propsSession.Get(propKey);
 			if (propStr == "")
 				break;
 			memFinds.Append(propStr);
@@ -675,7 +690,7 @@ void SciTEBase::RestoreSession() {
 
 		for (int i = 0;; i++) {
 			const std::string propKey = IndexPropKey("search", i, "replacewith");
-			const std::string propStr = propsSession.GetString(propKey.c_str());
+			const std::string_view propStr = propsSession.Get(propKey);
 			if (propStr == "")
 				break;
 			memReplaces.Append(propStr);
@@ -689,7 +704,7 @@ void SciTEBase::RestoreSession() {
 
 	for (int i = 0; i < bufferMax; i++) {
 		std::string propKey = IndexPropKey("buffer", i, "path");
-		std::string propStr = propsSession.GetString(propKey.c_str());
+		std::string propStr = propsSession.GetString(propKey);
 		if (propStr == "")
 			continue;
 
@@ -697,29 +712,27 @@ void SciTEBase::RestoreSession() {
 		bufferState.file.Set(GUI::StringFromUTF8(propStr));
 
 		propKey = IndexPropKey("buffer", i, "current");
-		if (propsSession.GetInt(propKey.c_str()))
+		if (propsSession.GetInt(propKey))
 			session.pathActive = bufferState.file;
 
 		propKey = IndexPropKey("buffer", i, "scroll");
-		const SA::Line scroll = propsSession.GetInteger(propKey.c_str());
-		bufferState.file.scrollPosition = scroll;
+		const SA::Line scroll = propsSession.GetInteger(propKey);
 
 		propKey = IndexPropKey("buffer", i, "position");
-		const SA::Position pos = propsSession.GetInteger(propKey.c_str());
+		const SA::Position pos = propsSession.GetInteger(propKey) - 1;	// -1 for 1 -> 0 based
 
-		bufferState.file.selection.anchor = pos - 1;
-		bufferState.file.selection.position = bufferState.file.selection.anchor;
+		bufferState.file.filePosition = FilePosition(SelectedRange(pos, pos), scroll);
 
 		if (props.GetInt("session.bookmarks")) {
 			propKey = IndexPropKey("buffer", i, "bookmarks");
-			propStr = propsSession.GetString(propKey.c_str());
+			propStr = propsSession.GetString(propKey);
 			bufferState.bookmarks = LinesFromString(propStr);
 		}
 
 		if (props.GetInt("fold") && !props.GetInt("fold.on.open") &&
 				props.GetInt("session.folds")) {
 			propKey = IndexPropKey("buffer", i, "folds");
-			propStr = propsSession.GetString(propKey.c_str());
+			propStr = propsSession.GetString(propKey);
 			bufferState.foldState = LinesFromString(propStr);
 		}
 
@@ -796,19 +809,19 @@ void SciTEBase::SaveSessionFile(const GUI::gui_char *sessionName) {
 	}
 
 	if (props.GetInt("buffers") && (!defaultSession || props.GetInt("save.session"))) {
-		const int curr = buffers.Current();
-		for (int i = 0; i < buffers.lengthVisible; i++) {
+		const BufferIndex curr = buffers.Current();
+		for (BufferIndex i = 0; i < buffers.lengthVisible; i++) {
 			const Buffer &buff = buffers.buffers[i];
 			if (buff.file.IsSet() && !buff.file.IsUntitled()) {
 				std::string propKey = IndexPropKey("buffer", i, "path");
 				fprintf(sessionFile, "\n%s=%s\n", propKey.c_str(), buff.file.AsUTF8().c_str());
 
-				const SA::Position pos = buff.file.selection.position + 1;
+				const SA::Position pos = buff.file.filePosition.selection.position + 1;	// +1 = 0 to 1 based
 				const std::string sPos = std::to_string(pos);
 				propKey = IndexPropKey("buffer", i, "position");
 				fprintf(sessionFile, "%s=%s\n", propKey.c_str(), sPos.c_str());
 
-				const SA::Line scroll = buff.file.scrollPosition;
+				const SA::Line scroll = buff.file.filePosition.scrollPosition;
 				const std::string sScroll = std::to_string(scroll);
 				propKey = IndexPropKey("buffer", i, "scroll");
 				fprintf(sessionFile, "%s=%s\n", propKey.c_str(), sScroll.c_str());
@@ -841,39 +854,34 @@ void SciTEBase::SaveSessionFile(const GUI::gui_char *sessionName) {
 		FailedSaveMessageBox(sessionPathName);
 	}
 
-	FilePath sessionFilePath = FilePath(sessionPathName).AbsolutePath();
+	const FilePath sessionFilePath = FilePath(sessionPathName).AbsolutePath();
 	// Add/update SessionPath environment variable
-	props.Set("SessionPath", sessionFilePath.AsUTF8().c_str());
+	props.SetPath("SessionPath", sessionFilePath);
 }
 
 void SciTEBase::SetIndentSettings() {
 	// Get default values
-	const int useTabs = props.GetInt("use.tabs", 1);
-	const int tabSize = props.GetInt("tabsize");
-	const int indentSize = props.GetInt("indent.size");
+	const int useTabsDefault = props.GetInt("use.tabs", 1);
+	const int tabSizeDefault = props.GetInt("tabsize");
+	const int indentSizeDefault = props.GetInt("indent.size");
+
 	// Either set the settings related to the extension or the default ones
-	std::string fileNameForExtension = ExtensionFileName();
-	std::string useTabsChars = props.GetNewExpandString("use.tabs.",
-				   fileNameForExtension.c_str());
-	if (useTabsChars.length() != 0) {
-		wEditor.SetUseTabs(atoi(useTabsChars.c_str()));
-	} else {
-		wEditor.SetUseTabs(useTabs);
-	}
-	std::string tabSizeForExt = props.GetNewExpandString("tab.size.",
-				    fileNameForExtension.c_str());
-	if (tabSizeForExt.length() != 0) {
-		wEditor.SetTabWidth(atoi(tabSizeForExt.c_str()));
-	} else if (tabSize != 0) {
-		wEditor.SetTabWidth(tabSize);
-	}
-	std::string indentSizeForExt = props.GetNewExpandString("indent.size.",
-				       fileNameForExtension.c_str());
-	if (indentSizeForExt.length() != 0) {
-		wEditor.SetIndent(atoi(indentSizeForExt.c_str()));
-	} else {
-		wEditor.SetIndent(indentSize);
-	}
+	const std::string fileNameForExtension = ExtensionFileName();
+
+	const std::string useTabsChars = props.GetNewExpandString("use.tabs.",
+				   fileNameForExtension);
+	const int useTabs = IntegerFromString(useTabsChars, useTabsDefault);
+	wEditor.SetUseTabs(useTabs);
+
+	const std::string tabSizeForExt = props.GetNewExpandString("tab.size.",
+				    fileNameForExtension);
+	const int tabSize = IntegerFromString(tabSizeForExt, tabSizeDefault);
+	wEditor.SetTabWidth(tabSize);
+
+	const std::string indentSizeForExt = props.GetNewExpandString("indent.size.",
+				       fileNameForExtension);
+	const int indentSize = IntegerFromString(indentSizeForExt, indentSizeDefault);
+	wEditor.SetIndent(indentSize);
 }
 
 void SciTEBase::SetEol() {
@@ -958,7 +966,7 @@ void SciTEBase::RestoreState(const Buffer &buffer, bool restoreBookmarks) {
 
 void SciTEBase::Close(bool updateUI, bool loadingSession, bool makingRoomForNew) {
 	bool closingLast = true;
-	const int index = buffers.Current();
+	const BufferIndex index = buffers.Current();
 	if ((index >= 0) && buffers.initialised) {
 		buffers.buffers[index].CancelLoad();
 	}
@@ -1024,7 +1032,7 @@ void SciTEBase::Close(bool updateUI, bool loadingSession, bool makingRoomForNew)
 		if (updateUI) {
 			CheckReload();
 			RestoreState(bufferNext, false);
-			DisplayAround(bufferNext.file);
+			DisplayAround(bufferNext.file.filePosition);
 		}
 	}
 
@@ -1043,7 +1051,7 @@ void SciTEBase::Close(bool updateUI, bool loadingSession, bool makingRoomForNew)
 }
 
 void SciTEBase::CloseTab(int tab) {
-	const int tabCurrent = buffers.Current();
+	const BufferIndex tabCurrent = buffers.Current();
 	if (tab == tabCurrent) {
 		if (SaveIfUnsure() != SaveResult::cancelled) {
 			Close();
@@ -1073,8 +1081,8 @@ void SciTEBase::CloseAllBuffers(bool loadingSession) {
 SciTEBase::SaveResult SciTEBase::SaveAllBuffers(bool alwaysYes) {
 	SaveResult choice = SaveResult::completed;
 	UpdateBuffersCurrent();
-	const int currentBuffer = buffers.Current();
-	for (int i = 0; (i < buffers.lengthVisible) && (choice != SaveResult::cancelled); i++) {
+	const BufferIndex currentBuffer = buffers.Current();
+	for (BufferIndex i = 0; (i < buffers.lengthVisible) && (choice != SaveResult::cancelled); i++) {
 		if (buffers.buffers[i].isDirty) {
 			SetDocumentAt(i);
 			if (alwaysYes) {
@@ -1092,8 +1100,8 @@ SciTEBase::SaveResult SciTEBase::SaveAllBuffers(bool alwaysYes) {
 
 void SciTEBase::SaveTitledBuffers() {
 	UpdateBuffersCurrent();
-	const int currentBuffer = buffers.Current();
-	for (int i = 0; i < buffers.lengthVisible; i++) {
+	const BufferIndex currentBuffer = buffers.Current();
+	for (BufferIndex i = 0; i < buffers.lengthVisible; i++) {
 		if (buffers.buffers[i].isDirty && !buffers.buffers[i].file.IsUntitled()) {
 			SetDocumentAt(i);
 			Save();
@@ -1103,7 +1111,7 @@ void SciTEBase::SaveTitledBuffers() {
 }
 
 void SciTEBase::Next() {
-	int next = buffers.Current();
+	BufferIndex next = buffers.Current();
 	if (++next >= buffers.lengthVisible)
 		next = 0;
 	SetDocumentAt(next);
@@ -1111,7 +1119,7 @@ void SciTEBase::Next() {
 }
 
 void SciTEBase::Prev() {
-	int prev = buffers.Current();
+	BufferIndex prev = buffers.Current();
 	if (--prev < 0)
 		prev = buffers.lengthVisible - 1;
 
@@ -1119,28 +1127,28 @@ void SciTEBase::Prev() {
 	CheckReload();
 }
 
-void SciTEBase::ShiftTab(int indexFrom, int indexTo) {
+void SciTEBase::ShiftTab(BufferIndex indexFrom, BufferIndex indexTo) {
 	buffers.ShiftTo(indexFrom, indexTo);
 	buffers.SetCurrent(indexTo);
 	BuffersMenu();
 
 	TabSelect(indexTo);
 
-	DisplayAround(buffers.buffers[buffers.Current()].file);
+	DisplayAround(buffers.buffers[buffers.Current()].file.filePosition);
 }
 
 void SciTEBase::MoveTabRight() {
 	if (buffers.lengthVisible < 2) return;
-	const int indexFrom = buffers.Current();
-	int indexTo = indexFrom + 1;
+	const BufferIndex indexFrom = buffers.Current();
+	BufferIndex indexTo = indexFrom + 1;
 	if (indexTo >= buffers.lengthVisible) indexTo = 0;
 	ShiftTab(indexFrom, indexTo);
 }
 
 void SciTEBase::MoveTabLeft() {
 	if (buffers.lengthVisible < 2) return;
-	const int indexFrom = buffers.Current();
-	int indexTo = indexFrom - 1;
+	const BufferIndex indexFrom = buffers.Current();
+	BufferIndex indexTo = indexFrom - 1;
 	if (indexTo < 0) indexTo = buffers.lengthVisible - 1;
 	ShiftTab(indexFrom, indexTo);
 }
@@ -1184,10 +1192,13 @@ GUI::gui_string EscapeFilePath(const FilePath &path, [[maybe_unused]]Title desti
 }
 
 GUI::gui_string AbbreviateWithTilde(const GUI::gui_string &path) {
-#if defined(GTK)
-	const GUI::gui_string_view homeDirectory = getenv("HOME");
-	if (StartsWith(path, homeDirectory)) {
-		return GUI::gui_string(GUI_TEXT("~")) + path.substr(homeDirectory.size());
+#if defined(GTK) || defined(__APPLE__)
+	FilePath homePath = FilePath::UserHomeDirectory();
+	if (homePath.IsSet()) {
+		const GUI::gui_string_view homeDirectory = homePath.AsInternal();
+		if (StartsWith(path, homeDirectory)) {
+			return GUI::gui_string(GUI_TEXT("~")) + path.substr(homeDirectory.size());
+		}
 	}
 #endif
 	return path;
@@ -1252,14 +1263,13 @@ void SciTEBase::SetBuffersMenu() {
 
 	std::vector<GUI::gui_string> tabNames;
 
-	int pos;
-	for (pos = buffers.lengthVisible; pos < bufferMax; pos++) {
+	for (BufferIndex pos = buffers.lengthVisible; pos < bufferMax; pos++) {
 		DestroyMenuItem(menuBuffers, IDM_BUFFER + pos);
 	}
 	if (buffers.size() > 1) {
 		constexpr int menuStart = 4;
 		SetMenuItem(menuBuffers, menuStart, IDM_BUFFERSEP, GUI_TEXT(""));
-		for (pos = 0; pos < buffers.lengthVisible; pos++) {
+		for (BufferIndex pos = 0; pos < buffers.lengthVisible; pos++) {
 			const int itemID = bufferCmdID + pos;
 			const GUI::gui_string entry = BufferTitle(pos, buffers.buffers[pos],
 				Title::menu, props, localiser);
@@ -1326,16 +1336,15 @@ bool SciTEBase::AddFileToBuffer(const BufferState &bufferState) {
 		opened = Open(bufferState.file, static_cast<OpenFlags>(ofForceLoad));
 		// If forced synchronous should set up position, foldState and bookmarks
 		if (opened) {
-			const int iBuffer = buffers.GetDocumentByName(bufferState.file, false);
+			const BufferIndex iBuffer = buffers.GetDocumentByName(bufferState.file, false);
 			if (iBuffer >= 0) {
-				buffers.buffers[iBuffer].file.scrollPosition = bufferState.file.scrollPosition;
-				buffers.buffers[iBuffer].file.selection = bufferState.file.selection;
+				buffers.buffers[iBuffer].file.filePosition = bufferState.file.filePosition;
 				buffers.buffers[iBuffer].foldState = bufferState.foldState;
 				buffers.buffers[iBuffer].bookmarks = bufferState.bookmarks;
 				if (buffers.buffers[iBuffer].lifeState == Buffer::LifeState::opened) {
 					// File was opened synchronously
 					RestoreState(buffers.buffers[iBuffer], true);
-					DisplayAround(buffers.buffers[iBuffer].file);
+					DisplayAround(buffers.buffers[iBuffer].file.filePosition);
 					wEditor.ScrollCaret();
 				}
 			}
@@ -1377,19 +1386,16 @@ void SciTEBase::RemoveFileFromStack(const FilePath &file) {
 	SetFileStackMenu();
 }
 
-RecentFile SciTEBase::GetFilePosition() {
-	RecentFile rf;
-	rf.selection = GetSelectedRange();
-	rf.scrollPosition = GetCurrentScrollPosition();
-	return rf;
+FilePosition SciTEBase::GetFilePosition() {
+	return FilePosition(GetSelectedRange(), GetCurrentScrollPosition());
 }
 
-void SciTEBase::DisplayAround(const RecentFile &rf) {
-	if ((rf.selection.position != SA::InvalidPosition) && (rf.selection.anchor != SA::InvalidPosition)) {
-		SetSelection(rf.selection.anchor, rf.selection.position);
+void SciTEBase::DisplayAround(const FilePosition &fp) {
+	if ((fp.selection.position != SA::InvalidPosition) && (fp.selection.anchor != SA::InvalidPosition)) {
+		SetSelection(fp.selection.anchor, fp.selection.position);
 
 		const SA::Line curTop = wEditor.FirstVisibleLine();
-		const SA::Line lineTop = wEditor.VisibleFromDocLine(rf.scrollPosition);
+		const SA::Line lineTop = wEditor.VisibleFromDocLine(fp.scrollPosition);
 		wEditor.LineScroll(0, lineTop - curTop);
 		wEditor.ChooseCaretX();
 	}
@@ -1457,12 +1463,11 @@ void SciTEBase::StackMenu(int pos) {
 				SetIndentSettings();
 				SetEol();
 			} else if (recentFileStack[pos].IsSet()) {
-				RecentFile rf = recentFileStack[pos];
+				const RecentFile rf = recentFileStack[pos];
 				// Already asked user so don't allow Open to ask again.
 				Open(rf, ofNoSaveIfDirty);
-				CurrentBuffer()->file.scrollPosition = rf.scrollPosition;
-				CurrentBuffer()->file.selection = rf.selection;
-				DisplayAround(rf);
+				CurrentBuffer()->file.filePosition = rf.filePosition;
+				DisplayAround(rf.filePosition);
 			}
 		}
 	}
@@ -1475,8 +1480,8 @@ void SciTEBase::RemoveToolsMenu() {
 }
 
 void SciTEBase::SetMenuItemLocalised(int menuNumber, int position, int itemID,
-				     const char *text, const char *mnemonic) {
-	GUI::gui_string localised = localiser.Text(text);
+				     std::string_view text, std::string_view mnemonic) {
+	const GUI::gui_string localised = localiser.Text(text);
 	SetMenuItem(menuNumber, position, itemID, localised.c_str(), GUI::StringFromUTF8(mnemonic).c_str());
 }
 
@@ -1487,9 +1492,9 @@ bool SciTEBase::ToolIsImmediate(int item) {
 	std::string propName = "command.";
 	propName += itemSuffix;
 
-	std::string command = props.GetWild(propName.c_str(), FileNameExt().AsUTF8().c_str());
+	const std::string_view command = props.GetWild(propName, FileNameExt().AsUTF8());
 	if (command.length()) {
-		JobMode jobMode(props, item, FileNameExt().AsUTF8().c_str());
+		JobMode jobMode(props, item, FileNameExt().AsUTF8());
 		return jobMode.jobType == JobSubsystem::immediate;
 	}
 	return false;
@@ -1501,23 +1506,18 @@ void SciTEBase::SetToolsMenu() {
 	RemoveToolsMenu();
 	int menuPos = TOOLS_START;
 	for (int item = 0; item < toolMax; item++) {
-		const int itemID = IDM_TOOLS + item;
-		std::string prefix = "command.name.";
-		prefix += StdStringFromInteger(item);
-		prefix += ".";
-		std::string commandName = props.GetNewExpandString(prefix.c_str(), FileNameExt().AsUTF8().c_str());
-		if (commandName.length()) {
-			std::string sMenuItem = commandName;
-			prefix = "command.shortcut.";
-			prefix += StdStringFromInteger(item);
-			prefix += ".";
-			std::string sMnemonic = props.GetNewExpandString(prefix.c_str(), FileNameExt().AsUTF8().c_str());
-			if (item < 10 && sMnemonic.length() == 0) {
-				sMnemonic += "Ctrl+";
-				sMnemonic += StdStringFromInteger(item);
+		const std::string itemText = StdStringFromInteger(item);
+		const std::string itemSuffix = itemText + ".";
+		const std::string commandNamePrefix = "command.name." + itemSuffix;
+		const std::string commandName = props.GetNewExpandString(commandNamePrefix, FileNameExt().AsUTF8());
+		if (!commandName.empty()) {
+			const std::string shortcutPrefix = "command.shortcut." + itemSuffix;
+			std::string sMnemonic = props.GetNewExpandString(shortcutPrefix, FileNameExt().AsUTF8());
+			if (item < 10 && sMnemonic.empty()) {
+				sMnemonic = "Ctrl+" + itemText;
 			}
-			SetMenuItemLocalised(menuTools, menuPos, itemID, sMenuItem.c_str(),
-					     sMnemonic.length() ? sMnemonic.c_str() : nullptr);
+			const int itemID = IDM_TOOLS + item;
+			SetMenuItemLocalised(menuTools, menuPos, itemID, commandName, sMnemonic);
 			menuPos++;
 		}
 	}
@@ -1542,7 +1542,7 @@ void SciTEBase::SetToolsMenu() {
 }
 
 JobSubsystem SciTEBase::SubsystemType(const char *cmd) {
-	std::string subsystem = props.GetNewExpandString(cmd, FileNameExt().AsUTF8().c_str());
+	std::string subsystem = props.GetNewExpandString(cmd, FileNameExt().AsUTF8());
 	return subsystem.empty() ? JobSubsystem::cli : SubsystemFromChar(subsystem.at(0));
 }
 
@@ -1551,9 +1551,9 @@ void SciTEBase::ToolsMenu(int item) {
 
 	const std::string itemSuffix = StdStringFromInteger(item) + ".";
 	const std::string propName = std::string("command.") + itemSuffix;
-	std::string command(props.GetWild(propName.c_str(), FileNameExt().AsUTF8().c_str()));
+	std::string command(props.GetWild(propName, FileNameExt().AsUTF8()));
 	if (command.length()) {
-		JobMode jobMode(props, item, FileNameExt().AsUTF8().c_str());
+		JobMode jobMode(props, item, FileNameExt().AsUTF8());
 		if (jobQueue.IsExecuting() && (jobMode.jobType != JobSubsystem::immediate))
 			// Busy running a tool and running a second can cause failures.
 			return;
@@ -1906,6 +1906,14 @@ static SA::Line DecodeMessage(const char *cdoc, std::string &sourcePath, int for
 			break;
 		}
 
+	case SCE_ERR_BASH: {
+			const char *bashDiagnosticMark = ": line ";
+			const char *line = strstr(cdoc, bashDiagnosticMark);
+			sourcePath.assign(cdoc, line);
+			const SA::Line sourceNumber = IntegerFromText(line + strlen(bashDiagnosticMark)) - 1;
+			return sourceNumber;
+		}
+
 	case SCE_ERR_DIFF_MESSAGE: {
 			// Diff file header, either +++ <filename> or --- <filename>, may be followed by \t
 			// Often followed by a position line @@ <linenumber>
@@ -2067,7 +2075,7 @@ void SciTEBase::GoMessage(int dir) {
 						bExists = true;
 					} else {
 						// Look through buffers for name match
-						for (int i = buffers.lengthVisible - 1; i >= 0; i--) {
+						for (BufferIndex i = buffers.lengthVisible - 1; i >= 0; i--) {
 							if (sourcePath.Name().SameNameAs(buffers.buffers[i].file.Name())) {
 								messagePath = buffers.buffers[i].file;
 								bExists = true;
@@ -2084,13 +2092,11 @@ void SciTEBase::GoMessage(int dir) {
 
 				// If ctag then get line number after search tag or use ctag line number
 				if (style == SCE_ERR_CTAG) {
-					//without following focus GetCTag wouldn't work correct
-					WindowSetFocus(wOutput);
-					std::string cTag = GetCTag();
-					if (cTag.length() != 0) {
-						if (atoi(cTag.c_str()) > 0) {
+					const std::string cTag = GetCTag(&wOutput);
+					if (!cTag.empty()) {
+						if (IsADigit(cTag[0])) {
 							//if tag is linenumber, get line
-							sourceLine = IntegerFromText(cTag.c_str()) - 1;
+							sourceLine = IntPtrFromString(cTag, 0) - 1;
 						} else {
 							findWhat = cTag;
 							FindNext(false);
@@ -2142,7 +2148,7 @@ void SciTEBase::GoMessage(int dir) {
 				}
 				std::replace(message.begin(), message.end(), '\t', ' ');
 				::Remove(message, std::string("\n"));
-				props.Set("CurrentMessage", message.c_str());
+				props.Set("CurrentMessage", message);
 				UpdateStatusBar(false);
 				WindowSetFocus(wEditor);
 			}

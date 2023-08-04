@@ -36,24 +36,16 @@
 
 #include "StringHelpers.h"
 #include "FilePath.h"
+#include "PathMatch.h"
 #include "PropSetFile.h"
+#include "EditorConfig.h"
 
 // The comparison and case changing functions here assume ASCII
 // or extended ASCII such as the normal Windows code page.
 
-static std::set<std::string> FilterFromString(const std::string &values) {
-	std::vector<std::string> vsFilter = StringSplit(values, ' ');
-	std::set<std::string> fs;
-	for (std::vector<std::string>::const_iterator it=vsFilter.begin(); it != vsFilter.end(); ++it) {
-		if (!it->empty())
-			fs.insert(*it);
-	}
-	return fs;
-}
-
 void ImportFilter::SetFilter(const std::string &sExcludes, const std::string &sIncludes) {
-	excludes = FilterFromString(sExcludes);
-	includes = FilterFromString(sIncludes);
+	excludes = SetFromString(sExcludes, ' ');
+	includes = SetFromString(sIncludes, ' ');
 }
 
 bool ImportFilter::IsValid(const std::string &name) const {
@@ -73,6 +65,10 @@ void PropSetFile::Set(std::string_view key, std::string_view val) {
 	if (key.empty())	// Empty keys are not supported
 		return;
 	props[std::string(key)] = std::string(val);
+}
+
+void PropSetFile::SetPath(std::string_view key, const FilePath &path) {
+	Set(key, path.AsUTF8());
 }
 
 void PropSetFile::SetLine(const char *keyVal, bool unescape) {
@@ -105,13 +101,17 @@ void PropSetFile::SetLine(const char *keyVal, bool unescape) {
 void PropSetFile::Unset(std::string_view key) {
 	if (key.empty())	// Empty keys are not supported
 		return;
-	mapss::iterator keyPos = props.find(std::string(key));
+	const mapss::iterator keyPos = props.find(key);
 	if (keyPos != props.end())
 		props.erase(keyPos);
 }
 
-bool PropSetFile::Exists(const char *key) const {
-	mapss::const_iterator keyPos = props.find(std::string(key));
+void PropSetFile::Clear() noexcept {
+	props.clear();
+}
+
+bool PropSetFile::Exists(std::string_view key) const {
+	const mapss::const_iterator keyPos = props.find(key);
 	if (keyPos != props.end()) {
 		return true;
 	} else {
@@ -124,11 +124,10 @@ bool PropSetFile::Exists(const char *key) const {
 	}
 }
 
-std::string PropSetFile::GetString(const char *key) const {
-	const std::string sKey(key);
+std::string_view PropSetFile::Get(std::string_view key) const {
 	const PropSetFile *psf = this;
 	while (psf) {
-		mapss::const_iterator keyPos = psf->props.find(sKey);
+		const mapss::const_iterator keyPos = psf->props.find(key);
 		if (keyPos != psf->props.end()) {
 			return keyPos->second;
 		}
@@ -138,9 +137,14 @@ std::string PropSetFile::GetString(const char *key) const {
 	return "";
 }
 
-static std::string ShellEscape(const char *toEscape) {
-	std::string str(toEscape);
-	for (ptrdiff_t i = str.length()-1; i >= 0; --i) {
+std::string PropSetFile::GetString(std::string_view key) const {
+	return std::string(Get(key));
+}
+
+namespace {
+
+void ShellEscape(std::string &str) {
+	for (ptrdiff_t i = str.length() - 1; i >= 0; --i) {
 		switch (str[i]) {
 		case ' ':
 		case '|':
@@ -170,17 +174,18 @@ static std::string ShellEscape(const char *toEscape) {
 			break;
 		}
 	}
-	return str;
 }
 
-std::string PropSetFile::Evaluate(const char *key) const {
-	if (strchr(key, ' ')) {
-		if (isprefix(key, "escape ")) {
-			std::string val = GetString(key+7);
-			std::string escaped = ShellEscape(val.c_str());
-			return escaped;
-		} else if (isprefix(key, "= ")) {
-			const std::string sExpressions(key + 2);
+}
+
+std::string PropSetFile::Evaluate(std::string_view key) const {
+	if (key.find(' ') != std::string_view::npos) {
+		if (StartsWith(key, "escape ")) {
+			std::string val(Get(key.substr(7)));
+			ShellEscape(val);
+			return val;
+		} else if (StartsWith(key, "= ")) {
+			const std::string sExpressions(key.substr(2));
 			std::vector<std::string> parts = StringSplit(sExpressions, ';');
 			if (parts.size() > 1) {
 				bool equal = true;
@@ -191,15 +196,15 @@ std::string PropSetFile::Evaluate(const char *key) const {
 				}
 				return equal ? "1" : "0";
 			}
-		} else if (isprefix(key, "star ")) {
-			const std::string sKeybase(key + 5);
+		} else if (StartsWith(key, "star ")) {
+			const std::string sKeybase(key.substr(5));
 			// Create set of variables with values
 			mapss values;
 			// For this property set and all base sets
 			for (const PropSetFile *psf = this; psf; psf = psf->superPS) {
 				mapss::const_iterator it = psf->props.lower_bound(sKeybase);
 				while ((it != psf->props.end()) && (it->first.find(sKeybase) == 0)) {
-					mapss::iterator itDestination = values.find(it->first);
+					const mapss::iterator itDestination = values.find(it->first);
 					if (itDestination == values.end()) {
 						// Not present so add
 						values[it->first] = it->second;
@@ -213,18 +218,18 @@ std::string PropSetFile::Evaluate(const char *key) const {
 				combination += itV->second;
 			}
 			return combination;
-		} else if (isprefix(key, "scale ")) {
+		} else if (StartsWith(key, "scale ")) {
 			const int scaleFactor = GetInt("ScaleFactor", 100);
-			const char *val = key + 6;
+			std::string val(key.substr(6));
 			if (scaleFactor == 100) {
 				return val;
 			} else {
-				const int value = atoi(val);
+				const int value = IntegerFromString(val, 1);
 				return StdStringFromInteger(value * scaleFactor / 100);
 			}
 		}
 	} else {
-		return GetString(key);
+		return std::string(Get(key));
 	}
 	return "";
 }
@@ -235,15 +240,16 @@ std::string PropSetFile::Evaluate(const char *key) const {
 // for that, through a recursive function and a simple chain of pointers.
 
 struct VarChain {
-	VarChain(const char *var_=nullptr, const VarChain *link_=nullptr) noexcept : var(var_), link(link_) {}
+	VarChain() = default;
+	explicit VarChain(std::string_view var_, const VarChain *link_=nullptr) noexcept : var(var_), link(link_) {}
 
-	bool contains(const char *testVar) const {
-		return (var && (0 == strcmp(var, testVar)))
+	bool contains(std::string_view testVar) const {
+		return (var == testVar)
 		       || (link && link->contains(testVar));
 	}
 
-	const char *var;
-	const VarChain *link;
+	const std::string_view var;
+	const VarChain *link=nullptr;
 };
 
 static int ExpandAllInPlace(const PropSetFile &props, std::string &withVars, int maxExpands, const VarChain &blankVars = VarChain()) {
@@ -263,14 +269,14 @@ static int ExpandAllInPlace(const PropSetFile &props, std::string &withVars, int
 		}
 
 		std::string var(withVars, varStart + 2, varEnd - (varStart + 2));
-		std::string val = props.Evaluate(var.c_str());
+		std::string val = props.Evaluate(var);
 
-		if (blankVars.contains(var.c_str())) {
+		if (blankVars.contains(var)) {
 			val.clear(); // treat blankVar as an empty string (e.g. to block self-reference)
 		}
 
 		if (--maxExpands >= 0) {
-			maxExpands = ExpandAllInPlace(props, val, maxExpands, VarChain(var.c_str(), &blankVars));
+			maxExpands = ExpandAllInPlace(props, val, maxExpands, VarChain(var, &blankVars));
 		}
 
 		withVars.erase(varStart, varEnd-varStart+1);
@@ -282,32 +288,28 @@ static int ExpandAllInPlace(const PropSetFile &props, std::string &withVars, int
 	return maxExpands;
 }
 
-std::string PropSetFile::GetExpandedString(const char *key) const {
-	std::string val = GetString(key);
+std::string PropSetFile::GetExpandedString(std::string_view key) const {
+	std::string val(Get(key));
 	ExpandAllInPlace(*this, val, 200, VarChain(key));
 	return val;
 }
 
-std::string PropSetFile::Expand(const std::string &withVars, int maxExpands) const {
-	std::string val = withVars;
+std::string PropSetFile::Expand(std::string_view withVars, int maxExpands) const {
+	std::string val(withVars);
 	ExpandAllInPlace(*this, val, maxExpands);
 	return val;
 }
 
-int PropSetFile::GetInt(const char *key, int defaultValue) const {
+int PropSetFile::GetInt(std::string_view key, int defaultValue) const {
 	return IntegerFromString(GetExpandedString(key), defaultValue);
 }
 
-intptr_t PropSetFile::GetInteger(const char *key, intptr_t defaultValue) const {
+intptr_t PropSetFile::GetInteger(std::string_view key, intptr_t defaultValue) const {
 	return IntPtrFromString(GetExpandedString(key), defaultValue);
 }
 
-long long PropSetFile::GetLongLong(const char *key, long long defaultValue) const {
+long long PropSetFile::GetLongLong(std::string_view key, long long defaultValue) const {
 	return LongLongFromString(GetExpandedString(key), defaultValue);
-}
-
-void PropSetFile::Clear() noexcept {
-	props.clear();
 }
 
 /**
@@ -346,10 +348,6 @@ static bool GetFullLine(const char *&fpc, size_t &lenData, char *s, size_t len) 
 	return false;
 }
 
-static constexpr bool IsSpaceOrTab(char ch) noexcept {
-	return (ch == ' ') || (ch == '\t');
-}
-
 static bool IsCommentLine(const char *line) noexcept {
 	while (IsSpaceOrTab(*line)) ++line;
 	return (*line == '#');
@@ -375,7 +373,6 @@ void PropSetFile::Import(const FilePath &filename, const FilePath &directoryForI
 
 PropSetFile::ReadLineState PropSetFile::ReadLine(const char *lineBuffer, ReadLineState rls, const FilePath &directoryForImports,
 		const ImportFilter &filter, FilePathSet *imports, size_t depth) {
-	//UnSlash(lineBuffer);
 	if ((rls == ReadLineState::conditionFalse) && (!IsSpaceOrTab(lineBuffer[0])))    // If clause ends with first non-indented line
 		rls = ReadLineState::active;
 	if (isprefix(lineBuffer, "module ")) {
@@ -398,8 +395,14 @@ PropSetFile::ReadLineState PropSetFile::ReadLine(const char *lineBuffer, ReadLin
 		} else if (value == "1") {
 			rls = ReadLineState::active;
 		} else {
-			rls = (GetInt(value.c_str()) != 0) ? ReadLineState::active : ReadLineState::conditionFalse;
+			rls = (GetInt(value) != 0) ? ReadLineState::active : ReadLineState::conditionFalse;
 		}
+	} else if (superPS && isprefix(lineBuffer, "match ")) {
+		// Don't match on stand-alone property sets like localiser
+		const std::string pattern = lineBuffer + strlen("match") + 1;
+		const std::string relPath(Get("RelativePath"));
+		const bool matches = PathMatch(pattern, relPath);
+		rls = matches ? ReadLineState::active : ReadLineState::conditionFalse;
 	} else if (isprefix(lineBuffer, "import ")) {
 		if (directoryForImports.IsSet()) {
 			std::string importName(lineBuffer + strlen("import") + 1);
@@ -428,9 +431,10 @@ PropSetFile::ReadLineState PropSetFile::ReadLine(const char *lineBuffer, ReadLin
 	return rls;
 }
 
-void PropSetFile::ReadFromMemory(const char *data, size_t len, const FilePath &directoryForImports,
+void PropSetFile::ReadFromMemory(std::string_view data, const FilePath &directoryForImports,
 				 const ImportFilter &filter, FilePathSet *imports, size_t depth) {
-	const char *pd = data;
+	const char *pd = data.data();
+	size_t len = data.length();
 	std::vector<char> lineBuffer(len+1);	// +1 for NUL
 	ReadLineState rls = ReadLineState::active;
 	while (len > 0) {
@@ -447,14 +451,13 @@ void PropSetFile::ReadFromMemory(const char *data, size_t len, const FilePath &d
 bool PropSetFile::Read(const FilePath &filename, const FilePath &directoryForImports,
 		       const ImportFilter &filter, FilePathSet *imports, size_t depth) {
 	const std::string propsData = filename.Read();
-	const size_t lenFile = propsData.size();
-	if (lenFile > 0) {
-		std::string_view data(propsData.c_str(), lenFile);
+	if (!propsData.empty()) {
+		std::string_view data(propsData);
 		const std::string_view svUtf8BOM(UTF8BOM);
 		if (StartsWith(data, svUtf8BOM)) {
 			data.remove_prefix(svUtf8BOM.length());
 		}
-		ReadFromMemory(data.data(), data.length(), directoryForImports, filter, imports, depth);
+		ReadFromMemory(data, directoryForImports, filter, imports, depth);
 		return true;
 	}
 	return false;
@@ -466,13 +469,7 @@ bool StringEqual(std::string_view a, std::string_view b, bool caseSensitive) noe
 	if (caseSensitive) {
 		return a == b;
 	} else {
-		if (a.length() != b.length()) {
-			return false;
-		}
-		for (size_t i = 0; i < a.length(); i++) {
-			if (MakeUpperCase(a[i]) != MakeUpperCase(b[i]))
-				return false;
-		}
+		return EqualCaseInsensitive(a, b);
 	}
 	return true;
 }
@@ -513,45 +510,48 @@ bool MatchWild(std::string_view pattern, std::string_view text, bool caseSensiti
 	return false;
 }
 
-bool startswith(const std::string &s, const char *keybase) noexcept {
-	return isprefix(s.c_str(), keybase);
+bool MatchWildSet(std::string_view patternSet, std::string_view text, bool caseSensitive) {
+	while (!patternSet.empty()) {
+		const size_t sepPos = patternSet.find_first_of(';');
+		const std::string_view pattern = patternSet.substr(0, sepPos);
+		if (MatchWild(pattern, text, caseSensitive)) {
+			return true;
+		}
+		// Move to next
+		patternSet = (sepPos == std::string_view::npos) ? "" : patternSet.substr(sepPos + 1);
+	}
+	return false;
 }
 
 }
 
-std::string PropSetFile::GetWildUsingStart(const PropSetFile &psStart, const char *keybase, const char *filename) {
-	const std::string sKeybase(keybase);
+std::string_view PropSetFile::GetWildUsingStart(const PropSetFile &psStart, std::string_view keybase, std::string_view filename) const {
 	const PropSetFile *psf = this;
 	while (psf) {
-		mapss::const_iterator it = psf->props.lower_bound(sKeybase);
-		while ((it != psf->props.end()) && startswith(it->first, sKeybase.c_str())) {
-			const std::string_view orgkeyfile = it->first.c_str() + sKeybase.length();
+		mapss::const_iterator it = psf->props.lower_bound(keybase);
+		while ((it != psf->props.end()) && StartsWith(it->first, keybase)) {
+			if (it->first == keybase) {
+				return it->second;
+			}
+			const std::string_view first = it->first;
+			const std::string_view orgkeyfile = first.substr(keybase.length());
 			std::string key;	// keyFile may point into key so key lifetime must cover keyFile
 			std::string_view keyFile = orgkeyfile;
 
-			if (orgkeyfile.find("$(") == 0) {
+			if (StartsWith(orgkeyfile, "$(")) {
 				// $(X) is a variable so extract X and find its value
 				const size_t endVar = orgkeyfile.find_first_of(')');
 				if (endVar != std::string_view::npos) {
-					const std::string var(orgkeyfile.substr(2, endVar-2));
-					key = psStart.GetExpandedString(var.c_str());
+					const std::string_view var = orgkeyfile.substr(2, endVar-2);
+					key = psStart.GetExpandedString(var);
 					keyFile = key;
 				}
 			}
 
-			while (!keyFile.empty()) {
-				const size_t sepPos = keyFile.find_first_of(';');
-				const std::string_view pattern = keyFile.substr(0, sepPos);
-				if (MatchWild(pattern, filename, caseSensitiveFilenames)) {
-					return it->second;
-				}
-				// Move to next
-				keyFile = (sepPos == std::string_view::npos) ? "" : keyFile.substr(sepPos + 1);
-			}
-
-			if (it->first == sKeybase) {
+			if (MatchWildSet(keyFile, filename, caseSensitiveFilenames)) {
 				return it->second;
 			}
+
 			++it;
 		}
 		// Failed here, so try in base property set
@@ -560,15 +560,15 @@ std::string PropSetFile::GetWildUsingStart(const PropSetFile &psStart, const cha
 	return "";
 }
 
-std::string PropSetFile::GetWild(const char *keybase, const char *filename) {
+std::string_view PropSetFile::GetWild(std::string_view keybase, std::string_view filename) const {
 	return GetWildUsingStart(*this, keybase, filename);
 }
 
 // GetNewExpandString does not use Expand as it has to use GetWild with the filename for each
 // variable reference found.
 
-std::string PropSetFile::GetNewExpandString(const char *keybase, const char *filename) {
-	std::string withVars = GetWild(keybase, filename);
+std::string PropSetFile::GetNewExpandString(std::string_view keybase, std::string_view filename) const {
+	std::string withVars(GetWild(keybase, filename));
 	size_t varStart = withVars.find("$(");
 	int maxExpands = 1000;	// Avoid infinite expansion of recursive definitions
 	while ((varStart != std::string::npos) && (maxExpands > 0)) {
@@ -576,10 +576,11 @@ std::string PropSetFile::GetNewExpandString(const char *keybase, const char *fil
 		if (varEnd == std::string::npos) {
 			break;
 		}
-		std::string var(withVars, varStart + 2, varEnd - varStart - 2);	// Subtract the $(
-		std::string val = GetWild(var.c_str(), filename);
-		if (var == keybase)
-			val.clear(); // Self-references evaluate to empty string
+		const std::string_view var = std::string_view(withVars).substr(
+			varStart + 2, varEnd - varStart - 2);	// Subtract the $(
+		std::string val;
+		if (var != keybase)	// Self-references evaluate to empty string
+			val = GetWild(var, filename);
 		withVars.replace(varStart, varEnd - varStart + 1, val);
 		varStart = withVars.find("$(");
 		maxExpands--;
@@ -590,8 +591,8 @@ std::string PropSetFile::GetNewExpandString(const char *keybase, const char *fil
 /**
  * Initiate enumeration.
  */
-bool PropSetFile::GetFirst(const char *&key, const char *&val) {
-	mapss::iterator it = props.begin();
+bool PropSetFile::GetFirst(const char *&key, const char *&val) const {
+	const mapss::const_iterator it = props.begin();
 	if (it != props.end()) {
 		key = it->first.c_str();
 		val = it->second.c_str();
@@ -604,8 +605,8 @@ bool PropSetFile::GetFirst(const char *&key, const char *&val) {
 /**
  * Continue enumeration.
  */
-bool PropSetFile::GetNext(const char *&key, const char *&val) {
-	mapss::iterator it = props.find(key);
+bool PropSetFile::GetNext(const char *&key, const char *&val) const {
+	mapss::const_iterator it = props.find(key);
 	if (it != props.end()) {
 		++it;
 		if (it != props.end()) {
@@ -618,8 +619,6 @@ bool PropSetFile::GetNext(const char *&key, const char *&val) {
 }
 
 bool IsPropertiesFile(const FilePath &filename) {
-	FilePath ext = filename.Extension();
-	if (EqualCaseInsensitive(ext.AsUTF8().c_str(), extensionProperties + 1))
-		return true;
-	return false;
+	const FilePath ext = filename.Extension();
+	return EqualCaseInsensitive(ext.AsUTF8(), extensionProperties + 1);
 }

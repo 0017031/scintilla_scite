@@ -34,6 +34,7 @@ SciTEWin.o: \
 	../../scintilla/include/ScintillaTypes.h \
 	../../scintilla/include/ScintillaMessages.h \
 	../../scintilla/include/ScintillaCall.h \
+	../../scintilla/include/ScintillaStructures.h \
 	../../scintilla/include/Scintilla.h \
 	../../lexilla/include/Lexilla.h \
 	../../lexilla/access/LexillaAccess.h \
@@ -71,6 +72,7 @@ Sc1.o: \
 	../../scintilla/include/ScintillaTypes.h \
 	../../scintilla/include/ScintillaMessages.h \
 	../../scintilla/include/ScintillaCall.h \
+	../../scintilla/include/ScintillaStructures.h \
 	../../scintilla/include/Scintilla.h \
 	../../lexilla/include/Lexilla.h \
 	../../lexilla/access/LexillaAccess.h \
@@ -108,6 +110,7 @@ SciTEWinBar.o: \
 	../../scintilla/include/ScintillaTypes.h \
 	../../scintilla/include/ScintillaMessages.h \
 	../../scintilla/include/ScintillaCall.h \
+	../../scintilla/include/ScintillaStructures.h \
 	../../scintilla/include/Scintilla.h \
 	../../lexilla/include/Lexilla.h \
 	../../lexilla/access/LexillaAccess.h \
@@ -141,6 +144,7 @@ SciTEWinDlg.o: \
 	../../scintilla/include/ScintillaTypes.h \
 	../../scintilla/include/ScintillaMessages.h \
 	../../scintilla/include/ScintillaCall.h \
+	../../scintilla/include/ScintillaStructures.h \
 	../../scintilla/include/Scintilla.h \
 	../../lexilla/include/Lexilla.h \
 	../../lexilla/access/LexillaAccess.h \
@@ -164,7 +168,8 @@ SciTEWinDlg.o: \
 	UniqueInstance.h \
 	../src/StripDefinition.h \
 	Strips.h \
-	../src/SciTEKeys.h
+	../src/SciTEKeys.h \
+	DLLFunction.h
 Strips.o: \
 	Strips.cxx \
 	SciTEWin.h \
@@ -174,6 +179,7 @@ Strips.o: \
 	../../scintilla/include/ScintillaTypes.h \
 	../../scintilla/include/ScintillaMessages.h \
 	../../scintilla/include/ScintillaCall.h \
+	../../scintilla/include/ScintillaStructures.h \
 	../../scintilla/include/Scintilla.h \
 	../../lexilla/include/Lexilla.h \
 	../../lexilla/access/LexillaAccess.h \
@@ -208,6 +214,7 @@ UniqueInstance.o: \
 	../../scintilla/include/ScintillaTypes.h \
 	../../scintilla/include/ScintillaMessages.h \
 	../../scintilla/include/ScintillaCall.h \
+	../../scintilla/include/ScintillaStructures.h \
 	../../scintilla/include/Scintilla.h \
 	../../lexilla/include/Lexilla.h \
 	../../lexilla/access/LexillaAccess.h \
@@ -264,6 +271,7 @@ EditorConfig.o: \
 	../src/GUI.h \
 	../src/StringHelpers.h \
 	../src/FilePath.h \
+	../src/PathMatch.h \
 	../src/EditorConfig.h
 ExportHTML.o: \
 	../src/ExportHTML.cxx \
@@ -378,6 +386,7 @@ ExportXML.o: \
 FilePath.o: \
 	../src/FilePath.cxx \
 	../src/GUI.h \
+	../src/StringHelpers.h \
 	../src/FilePath.h
 FileWorker.o: \
 	../src/FileWorker.cxx \
@@ -433,12 +442,20 @@ MultiplexExtension.o: \
 	../../scintilla/include/ScintillaCall.h \
 	../src/MultiplexExtension.h \
 	../src/Extender.h
+PathMatch.o: \
+	../src/PathMatch.cxx \
+	../src/GUI.h \
+	../src/StringHelpers.h \
+	../src/FilePath.h \
+	../src/PathMatch.h
 PropSetFile.o: \
 	../src/PropSetFile.cxx \
 	../src/GUI.h \
 	../src/StringHelpers.h \
 	../src/FilePath.h \
-	../src/PropSetFile.h
+	../src/PathMatch.h \
+	../src/PropSetFile.h \
+	../src/EditorConfig.h
 ScintillaWindow.o: \
 	../src/ScintillaWindow.cxx \
 	../../scintilla/include/ScintillaTypes.h \
@@ -1037,4 +1054,5 @@ ScintillaCall.o: \
 	../../scintilla/call/ScintillaCall.cxx \
 	../../scintilla/include/ScintillaTypes.h \
 	../../scintilla/include/ScintillaMessages.h \
-	../../scintilla/include/ScintillaCall.h
+	../../scintilla/include/ScintillaCall.h \
+	../../scintilla/include/ScintillaStructures.h
