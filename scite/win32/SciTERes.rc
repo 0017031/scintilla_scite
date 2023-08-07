@@ -8,7 +8,9 @@
 
 SciTE ICON SciBall.ico
 
+#ifndef CMAKE_BUILD
 1 RT_MANIFEST SciTE.exe.manifest
+#endif
 
 SciTE MENU
 BEGIN
@@ -18,12 +20,11 @@ BEGIN
 	MENUITEM "&New\tCtrl+N",		IDM_NEW
 	MENUITEM "&Open...\tCtrl+O",		IDM_OPEN
 	MENUITEM "Open Selected &Filename\tCtrl+Shift+O",	IDM_OPENSELECTED
-	MENUITEM "&Revert\tCtrl+R",		IDM_REVERT
+    MENUITEM "Revert_&D\tCtrl+R",		IDM_REVERT
 	MENUITEM "&Close\tCtrl+W",		IDM_CLOSE
 	MENUITEM "&Save\tCtrl+S",		IDM_SAVE
 	MENUITEM "Save &As...\tCtrl+Shift+S",	IDM_SAVEAS
 	MENUITEM "Save a Cop&y...\tCtrl+Shift+P",	IDM_SAVEACOPY
-	MENUITEM "Copy Pat&h",			IDM_COPYPATH
 	POPUP "Encodin&g"
 	BEGIN
 		MENUITEM "&Code Page Property",		IDM_ENCODING_DEFAULT
@@ -58,17 +59,19 @@ BEGIN
 	MENUITEM "Cu&t\tCtrl+X",				IDM_CUT
 	MENUITEM "&Copy\tCtrl+C",				IDM_COPY
 	MENUITEM "&Paste\tCtrl+V",				IDM_PASTE
-	MENUITEM "Duplicat&e\tCtrl+D",				IDM_DUPLICATE
+    MENUITEM "Duplicat&e",				IDM_DUPLICATE
 	MENUITEM "&Delete\tDel",				IDM_CLEAR
 	MENUITEM "Select &All\tCtrl+A",			IDM_SELECTALL
-	MENUITEM "Copy as RT&F",				IDM_COPYASRTF
+	MENUITEM "Copy as RTF &J",				IDM_COPYASRTF
 	MENUITEM SEPARATOR
-	MENUITEM "Match &Brace\tCtrl+E",			IDM_MATCHBRACE
-	MENUITEM "Select t&o Brace\tCtrl+Shift+E",	IDM_SELECTTOBRACE
+    MENUITEM "Copy &File Path",			IDM_COPYPATH
+    MENUITEM SEPARATOR
+    MENUITEM "Match &Brace\tCtrl+B",			IDM_MATCHBRACE
+    MENUITEM "Select t&o Brace\tCtrl+Shift+B",	IDM_SELECTTOBRACE
 	MENUITEM "S&how Calltip\tCtrl+Shift+Space",	IDM_SHOWCALLTIP
 	MENUITEM "Complete S&ymbol\tCtrl+I",		IDM_COMPLETE
 	MENUITEM "Complete &Word\tCtrl+Enter",		IDM_COMPLETEWORD
-	MENUITEM "Expand Abbre&viation\tCtrl+B",	IDM_ABBREV
+    MENUITEM "Expand Abbre&viation",	IDM_ABBREV
 	MENUITEM "&Insert Abbreviation\tCtrl+Shift+R",	IDM_INS_ABBREV
 	MENUITEM "Block Co&mment or Uncomment\tCtrl+Q",	IDM_BLOCK_COMMENT
 	MENUITEM "Bo&x Comment\tCtrl+Shift+B",	IDM_BOX_COMMENT
@@ -81,27 +84,27 @@ BEGIN
 		MENUITEM "&Join",						IDM_JOIN
 		MENUITEM "&Split",						IDM_SPLIT
 	END
-END // used: abcdefghilmnoprstuvwxy
+END // used: abcdefghijlmnoprstuvwxy
 
 POPUP "&Search"
 BEGIN
-	MENUITEM "&Find...\tCtrl+F",				IDM_FIND
-	MENUITEM "Find &Next\tF3",				IDM_FINDNEXT
-	MENUITEM "Find &Previous\tShift+F3",		IDM_FINDNEXTBACK
+	MENUITEM "Find...\tCtrl+F",				IDM_FIND
+	MENUITEM "Find Next\tF3",				IDM_FINDNEXT
+	MENUITEM "Find Previous\tShift+F3",		IDM_FINDNEXTBACK
 	MENUITEM "F&ind in Files...\tCtrl+Shift+F",	IDM_FINDINFILES
-	MENUITEM "&Replace...\tCtrl+H",			IDM_REPLACE
-	MENUITEM "Incremental &Search...\tCtrl+Alt+I",	IDM_INCSEARCH
-	MENUITEM "Fi&lter...\tCtrl+Alt+F",			IDM_FILTER
-	MENUITEM "Selection &Add Next\tCtrl+Shift+D",	IDM_SELECTIONADDNEXT
-	MENUITEM "Selection Add &Each",			IDM_SELECTIONADDEACH
+	MENUITEM "Replace...\tCtrl+H",			IDM_REPLACE
+	MENUITEM "Incremental Search...\tCtrl+Alt+I",	IDM_INCSEARCH
+	MENUITEM "Filter...\tCtrl+Alt+F",			IDM_FILTER
+	MENUITEM "Selection Add Next\tCtrl+Shift+D",	IDM_SELECTIONADDNEXT
+	MENUITEM "Selection Add Each",			IDM_SELECTIONADDEACH
 	MENUITEM SEPARATOR
-	MENUITEM "&Go to...\tCtrl+G",			IDM_GOTO
-	MENUITEM "Next Book&mark\tF2",			IDM_BOOKMARK_NEXT
-	MENUITEM "Pre&vious Bookmark\tShift+F2",	IDM_BOOKMARK_PREV
-	MENUITEM "&Toggle Bookmark\tCtrl+F2",		IDM_BOOKMARK_TOGGLE
-	MENUITEM "&Clear All Bookmarks",			IDM_BOOKMARK_CLEARALL
+	MENUITEM "Go to...\tCtrl+G",			IDM_GOTO
+	MENUITEM "Next Bookmark\tF2",			IDM_BOOKMARK_NEXT
+	MENUITEM "Previous Bookmark\tShift+F2",	IDM_BOOKMARK_PREV
+	MENUITEM "Toggle Bookmark\tCtrl+F2",		IDM_BOOKMARK_TOGGLE
+	MENUITEM "Clear All Bookmarks",			IDM_BOOKMARK_CLEARALL
 	MENUITEM "Select All &Bookmarks",		IDM_BOOKMARK_SELECT_ALL
-END // used(15): abcefgilmnprstv // Available: dhjkoquwxyz
+END // used(0): // Available: a~z
 
 POPUP "&View"
 BEGIN
@@ -179,11 +182,11 @@ BEGIN
 	MENUITEM "&Save All",				IDM_SAVEALL
 END
 
-POPUP "&Help"
+POPUP "&Help.mine"
 BEGIN
 	MENUITEM "&Help\tF1", 				IDM_HELP
 #ifdef STATIC_BUILD
-	MENUITEM "&Sc1 Help",			IDM_HELP_SCITE
+	MENUITEM "&Sc1 Help (STATIC)",			IDM_HELP_SCITE
 	MENUITEM "&About Sc1",				IDM_ABOUT
 #else
 	MENUITEM "&SciTE Help",			IDM_HELP_SCITE
@@ -453,7 +456,7 @@ BEGIN
 
 	"F", IDM_FIND,   VIRTKEY, CONTROL
 	"F", IDM_FINDINFILES,   VIRTKEY, CONTROL, SHIFT
-	"F", IDM_FILTER,   VIRTKEY, CONTROL, ALT
+//	"F", IDM_FILTER,   VIRTKEY, CONTROL, ALT
 	"H", IDM_REPLACE,  VIRTKEY, CONTROL
 	"D", IDM_SELECTIONADDNEXT,  VIRTKEY, CONTROL, SHIFT
 	"G", IDM_GOTO, VIRTKEY, CONTROL
@@ -632,7 +635,7 @@ BEGIN
 		BEGIN
 			VALUE	"CompanyName",	"Neil Hodgson neilh@scintilla.org\0"
 			VALUE	"FileDescription",	"SciTE - a Scintilla based Text Editor\0"
-			VALUE	"FileVersion",	VERSION_SCITE "\0"
+			VALUE	"FileVersion",	VERSION_SCITE "my\0"
 			VALUE	"InternalName",	"SciTE\0"
 			VALUE	"LegalCopyright",	"Copyright " COPYRIGHT_YEARS " by Neil Hodgson\0"
 			VALUE	"OriginalFilename",	"SciTE.EXE\0"
@@ -641,4 +644,3 @@ BEGIN
 		END
 	END
 END
-
