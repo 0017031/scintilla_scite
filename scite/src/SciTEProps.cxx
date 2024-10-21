@@ -319,6 +319,8 @@ void SciTEBase::SetOneStyle(GUI::ScintillaWindow &win, int style, std::string_vi
 		win.StyleSetItalic(style, sd.italics);
 	if (sd.specified & StyleDefinition::sdWeight)
 		win.StyleSetWeight(style, sd.weight);
+	if (sd.specified & StyleDefinition::sdStretch)
+		win.StyleSetStretch(style, sd.stretch);
 	if (sd.specified & StyleDefinition::sdFont) {
 		win.StyleSetFont(style, sd.font.c_str());
 		bool inMonospacedList = !monospacedList.empty() && (monospacedList.back() == "*");
@@ -550,6 +552,7 @@ static const char *propertiesToForward[] = {
 	"lexer.asm.comment.delimiter",
 	"lexer.baan.styling.within.preprocessor",
 	"lexer.bash.command.substitution",
+	"lexer.bash.nested.backticks",
 	"lexer.bash.special.parameter",
 	"lexer.bash.styling.inside.backticks",
 	"lexer.bash.styling.inside.heredoc",
@@ -582,6 +585,8 @@ static const char *propertiesToForward[] = {
 	"lexer.haskell.allow.quotes",
 	"lexer.haskell.cpp",
 	"lexer.haskell.import.safe",
+	"lexer.html.allow.asp",
+	"lexer.html.allow.php",
 	"lexer.html.django",
 	"lexer.html.mako",
 	"lexer.json.allow.comments",
@@ -600,6 +605,7 @@ static const char *propertiesToForward[] = {
 	"lexer.python.literals.binary",
 	"lexer.python.strings.b",
 	"lexer.python.strings.f",
+	"lexer.python.strings.f.pep.701",
 	"lexer.python.strings.over.newline",
 	"lexer.python.strings.u",
 	"lexer.python.unicode.identifiers",
@@ -620,6 +626,8 @@ static const char *propertiesToForward[] = {
 	"lexer.verilog.update.preprocessor",
 	"lexer.visualprolog.backquoted.strings",
 	"lexer.visualprolog.verbatim.strings",
+	"lexer.xml.allow.asp",
+	"lexer.xml.allow.php",
 	"lexer.xml.allow.scripts",
 	"nsis.ignorecase",
 	"nsis.uservars",
@@ -795,7 +803,7 @@ void SciTEBase::ReadProperties() {
 	Lexilla::Load(lexillaPath.empty() ? "." : lexillaPath);
 
 	std::vector<std::string> libraryProperties = Lexilla::LibraryProperties();
-	for (std::string property : libraryProperties) {
+	for (const std::string &property : libraryProperties) {
 		std::string key("lexilla.context.");
 		key += property;
 		std::string value = props.GetExpandedString(key);
@@ -1153,6 +1161,9 @@ void SciTEBase::ReadProperties() {
 
 	const int autoCChooseSingle = props.GetInt("autocomplete.choose.single");
 	wEditor.AutoCSetChooseSingle(autoCChooseSingle);
+
+	const Scintilla::MultiAutoComplete autoCMulti = static_cast<Scintilla::MultiAutoComplete>(props.GetInt("autocomplete.multi"));
+	wEditor.AutoCSetMulti(autoCMulti);
 
 	wEditor.AutoCSetCancelAtStart(false);
 	wEditor.AutoCSetDropRestOfWord(false);

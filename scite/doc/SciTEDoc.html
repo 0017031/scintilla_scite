@@ -369,7 +369,9 @@ NameError: name 'mistake' is not defined
         command line last session will not restore even if "save.session"
         variable is set to "1". This makes "save.session" safe to use - you
         will never open a couple of files when you are trying to open just
-        one, specific file.
+        one, specific file. However, if you wish to have files opened with your
+        last session, you can do so by also setting "load.session.always"
+        and "check.if.already.open" to "1".
      </p>
      <p>
         By setting "session.bookmarks" and "session.folds" variables bookmarks
@@ -1493,7 +1495,7 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
           technology
         </td>
         <td>
-        On Windows Vista or newer, this can be set to 1, 2 or 3 to use the Direct2D and DirectWrite APIs
+        This can be set to 1, 2 or 3 to use the Direct2D and DirectWrite APIs
         for higher quality antialiased drawing or 0 to use the older GDI. The default is 1.
         The value 2 causes the frame to be retained after presentation which
         may prevent drawing failures on some cards and drivers.
@@ -2264,6 +2266,14 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         Set the number of items that are visible in autocompletion lists. The default is 9.
         </td>
       </tr>
+      <tr id='property-autocomplete.multi'>
+        <td>
+          autocomplete.multi
+        </td>
+        <td>
+        When set to 1 inserts the autocompletion choice in all selections.
+        </td>
+      </tr>
       <tr id='property-autocompleteword.automatic'>
         <td>
           autocompleteword.automatic
@@ -2411,7 +2421,7 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         </tr>
         <tr id='property-fold.baan.syntax.based'>
         <td>fold.baan.syntax.based</td>
-        <td>Set this property to 0 to disable syntax based folding, which is folding based on '{' & '('.</td>
+        <td>Set this property to 0 to disable syntax based folding, which is folding based on '{' &amp; '('.</td>
         </tr>
         <tr id='property-fold.basic.comment.explicit'>
         <td>fold.basic.comment.explicit</td>
@@ -2645,6 +2655,10 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <td>lexer.bash.command.substitution</td>
         <td>Set how to highlight $() command substitution. 0 (the default) highlighted as backticks. 1 highlighted inside. 2 highlighted inside with extra scope tracking.</td>
         </tr>
+        <tr id='property-lexer.bash.nested.backticks'>
+        <td>lexer.bash.nested.backticks</td>
+        <td>Set this property to 0 to disable nested backquoted command substitution.</td>
+        </tr>
         <tr id='property-lexer.bash.special.parameter'>
         <td>lexer.bash.special.parameter</td>
         <td>Set shell (default is Bash) special parameters.</td>
@@ -2671,7 +2685,7 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         </tr>
         <tr id='property-lexer.cpp.backquoted.strings'>
         <td>lexer.cpp.backquoted.strings</td>
-        <td>Set to 1 to enable highlighting of back-quoted raw strings .</td>
+        <td>Set how to highlighting back-quoted strings. 0 (the default) no highlighting. 1 highlighted as Go raw string. 2 highlighted as JavaScript template literal.</td>
         </tr>
         <tr id='property-lexer.cpp.escape.sequence'>
         <td>lexer.cpp.escape.sequence</td>
@@ -2755,7 +2769,7 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         </tr>
         <tr id='property-lexer.haskell.allow.questionmark'>
         <td>lexer.haskell.allow.questionmark</td>
-        <td>Set to 1 to allow the '?' character at the start of identifiers with the haskell lexer (GHC & Hugs -XImplicitParams extension)</td>
+        <td>Set to 1 to allow the '?' character at the start of identifiers with the haskell lexer (GHC &amp; Hugs -XImplicitParams extension)</td>
         </tr>
         <tr id='property-lexer.haskell.allow.quotes'>
         <td>lexer.haskell.allow.quotes</td>
@@ -2768,6 +2782,14 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <tr id='property-lexer.haskell.import.safe'>
         <td>lexer.haskell.import.safe</td>
         <td>Set to 0 to disallow "safe" keyword in imports (GHC -XSafe, -XTrustworthy, -XUnsafe extensions)</td>
+        </tr>
+        <tr id='property-lexer.html.allow.asp'>
+        <td>lexer.html.allow.asp</td>
+        <td>Set to 0 to disable ASP in HTML.</td>
+        </tr>
+        <tr id='property-lexer.html.allow.php'>
+        <td>lexer.html.allow.php</td>
+        <td>Set to 0 to disable PHP in HTML, 1 to accept &lt;?php and &lt;?=, 2 to also accept &lt;?.The default is 2.</td>
         </tr>
         <tr id='property-lexer.html.django'>
         <td>lexer.html.django</td>
@@ -2828,6 +2850,10 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <tr id='property-lexer.python.strings.f'>
         <td>lexer.python.strings.f</td>
         <td>Set to 0 to not recognise Python 3.6 f-string literals f"var={var}".</td>
+        </tr>
+        <tr id='property-lexer.python.strings.f.pep.701'>
+        <td>lexer.python.strings.f.pep.701</td>
+        <td>Set to 0 to use pre-PEP 701 / Python 3.12 f-string lexing.</td>
         </tr>
         <tr id='property-lexer.python.strings.over.newline'>
         <td>lexer.python.strings.over.newline</td>
@@ -2892,6 +2918,14 @@ representations=π=Pi,\u20AA=shekel(\u20AA),!0,#FF000090,\x0D\x0A=crlf</div>
         <tr id='property-lexer.visualprolog.verbatim.strings'>
         <td>lexer.visualprolog.verbatim.strings</td>
         <td>Set to 0 to disable highlighting verbatim strings using '@'.</td>
+        </tr>
+        <tr id='property-lexer.xml.allow.asp'>
+        <td>lexer.xml.allow.asp</td>
+        <td>Set to 0 to disable ASP in XML.</td>
+        </tr>
+        <tr id='property-lexer.xml.allow.php'>
+        <td>lexer.xml.allow.php</td>
+        <td>Set to 0 to disable PHP in XML, 1 to accept &lt;?php and &lt;?=, 2 to also accept &lt;?.The default is 2.</td>
         </tr>
         <tr id='property-lexer.xml.allow.scripts'>
         <td>lexer.xml.allow.scripts</td>
@@ -3261,16 +3295,19 @@ Prev File|IDM_PREVFILE|<br/>
       </tr>
       <tr id='property-save.session'>
         <td>
-          <a name='property-save.recent'></a><a name='property-save.position'></a><a name='property-save.find'></a>
+          <a name='property-save.recent'></a><a name='property-load.session.always'></a><a name='property-save.position'></a><a name='property-save.find'></a>
           save.session<br />
+          load.session.always<br />
           save.recent<br />
           save.position<br />
           save.find
         </td>
         <td>
-        If you set save.session, the list of currently opened buffers will be saved on exit
+        If you set save.session to 1, the list of currently opened buffers will be saved on exit
         in a session file. When you start SciTE next time (without specifying a file name
-        on the command line) the last session will be restored automatically.<br />
+        on the command line) the last session will be restored automatically. If you also
+        set load.session.always and check.if.already.open to 1, SciTE will restore your last session
+        and open the specified file alongside it.<br />
         <b>For GTK</b>, the file is called ".SciTE.session" and is located in the
         directory given by the SciTE_USERHOME environment variable and if that is
         not set, the value of the SciTE_HOME environment variable and if that is not
@@ -3841,7 +3878,7 @@ imports.include=fortran lisp
           settings associate a file name with a lexer.<br />
           The lexers included in SciTE are written in C++ and compiled into the SciTE executable.
           Lexers can also be written as a <a href="ScriptLexer.html">Lua script</a>
-          or as a Lua LPeg lexer using <a href="http://code.google.com/p/scintillua/">scintillua</a>.
+          or as a Lua LPeg lexer using <a href="https://orbitalquark.github.io/scintillua">scintillua</a>.
         </td>
       </tr>
       <tr id='property-shbang'>
@@ -3950,7 +3987,7 @@ imports.include=fortran lisp
           each lexer.<br />
            The value of each setting is a set of ',' separated attributes, some of which have a
           subvalue after a ':'. The attributes are: <div class="example">font, size, fore, back, italics, notitalics, bold,
-          notbold, weight, eolfilled, noteolfilled, underlined, notunderlined, case,
+          notbold, weight, stretch. eolfilled, noteolfilled, underlined, notunderlined, case,
           visible, notvisible, invisiblerepresentation, changeable, and notchangeable</div>
          <table cellpadding="1" cellspacing="0" border="1" summary="Style fields">
           <tr><th>attribute</th><th>subvalue</th></tr>
@@ -3962,7 +3999,8 @@ imports.include=fortran lisp
           <tr><td>notitalics</td><td></td></tr>
           <tr><td>bold</td><td></td></tr>
           <tr><td>notbold</td><td></td></tr>
-          <tr><td>weight</td><td>numeric 1.. 999: 100=light, 400=normal, 700=bold</td></tr>
+          <tr><td>weight</td><td>numeric 1 .. 999: 100=light, 400=normal, 700=bold</td></tr>
+          <tr><td>stretch</td><td>numeric 1 .. 9: 1=ultra-condensed, 5=normal, 9=ultra-expanded</td></tr>
           <tr><td>eolfilled</td><td></td></tr>
           <tr><td>noteolfilled</td><td></td></tr>
           <tr><td>underlined</td><td></td></tr>
@@ -4229,13 +4267,19 @@ quiet - accepts keyword arguments yes and no<br />
 replaceselection - accepts yes, no, and auto<br />
 savebefore - accepts yes, no, and prompt<br />
 subsystem - console, windows, shellexec, lua, director, winhelp, htmlhelp, immediate<br />
-groupundo - yes or no
+groupundo - yes or no<br />
+<span class="windowsonly">lowpriority - accepts keyword arguments yes and no</span>
 </div>
-        Currently, all of these except groupundo are based on individual properties with
-        similar names, and so are not described separately here.  The groupundo setting
+        Currently, all of these except groupundo and lowpriority are based on individual properties with
+        similar names, and so are not described separately here.<br />
+        The groupundo setting
         works with subsystem 3 (lua / director), and indicates that SciTE should treat any
         changes made by the command as a single undo action.  A command that uses the
         groupundo setting should not change which buffer is active in the editor.<br />
+
+        The lowpriority setting works on Windows with console or windows subsystem only and sets
+        the priority class of the process to below normal.
+        This can improve interactive use of the computer while the command is executing.<br />
 
         The command.shortcut property allows you to specify a keyboard shortcut for the
         command.  By default, commands 0 to 9 have keyboard shortcuts Ctrl+0 to Ctrl+9
@@ -5201,7 +5245,7 @@ groupundo - yes or no
     </h3>
     <p>
        The .api files can be generated by hand or by using a program.
-       There are also <a href="http://code.google.com/p/scite-files/wiki/Customization">downloadable ready-to-use
+       There are also <a href="https://github.com/moltenform/scite-files">downloadable ready-to-use
        .api files.</a>
     </p>
     <p>
@@ -5241,7 +5285,7 @@ groupundo - yes or no
        SciTE in other languages
     </h3>
     <p>
-       SciTE can be and has been <a href="http://code.google.com/p/scite-files/wiki/Translations">translated into other languages</a>.
+       SciTE can be and has been <a href="https://github.com/moltenform/scite-files/blob/main/files/translations.md">translated into other languages</a>.
     </p>
     <h3 id="Building">
        Building SciTE

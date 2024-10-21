@@ -260,11 +260,9 @@ SciTEWin::~SciTEWin() {
 	for (Buffer &buffer : buffers.buffers) {
 		// At this point, there should be no documents but sometimes there are
 		// which may be due to asynchronous I/O.
-		// wEditor has been closed so can't perform correct release of documents.
-		// Show debugger in this case.
-		assert(!buffer.doc);
-		// Drop ownership, leads to leak but exiting anyway.
-		std::ignore = buffer.doc.release();
+		// To break in debugger to see any documents that still exist:
+		//assert(!buffer.doc);
+		buffer.doc.reset();
 	}
 
 	if (hDevMode)
@@ -285,7 +283,7 @@ uintptr_t SciTEWin::GetInstance() {
 	return reinterpret_cast<uintptr_t>(hInstance);
 }
 
-void SciTEWin::Register(HINSTANCE hInstance_) {
+void SciTEWin::Register(HINSTANCE hInstance_) noexcept {
 	const TCHAR resourceName[] = TEXT("SciTE");
 
 	hInstance = hInstance_;
@@ -318,7 +316,7 @@ void SciTEWin::Register(HINSTANCE hInstance_) {
 
 namespace {
 
-int CodePageFromName(const std::string &encodingName) {
+int CodePageFromName(const std::string &encodingName) noexcept {
 	struct Encoding {
 		const char *name;
 		int codePage;
@@ -351,7 +349,7 @@ std::string StringEncode(std::wstring_view wsv, int codePage) {
 		const int sLength = static_cast<int>(wsv.length());
 		const int cchMulti = ::WideCharToMultiByte(codePage, 0, wsv.data(), sLength, nullptr, 0, nullptr, nullptr);
 		std::string sMulti(cchMulti, 0);
-		::WideCharToMultiByte(codePage, 0, wsv.data(), sLength, &sMulti[0], cchMulti, nullptr, nullptr);
+		::WideCharToMultiByte(codePage, 0, wsv.data(), sLength, sMulti.data(), cchMulti, nullptr, nullptr);
 		return sMulti;
 	} else {
 		return std::string();
@@ -363,7 +361,7 @@ std::wstring StringDecode(std::string_view sv, int codePage) {
 		const int sLength = static_cast<int>(sv.length());
 		const int cchWide = ::MultiByteToWideChar(codePage, 0, sv.data(), sLength, nullptr, 0);
 		std::wstring sWide(cchWide, 0);
-		::MultiByteToWideChar(codePage, 0, sv.data(), sLength, &sWide[0], cchWide);
+		::MultiByteToWideChar(codePage, 0, sv.data(), sLength, sWide.data(), cchWide);
 		return sWide;
 	} else {
 		return std::wstring();
@@ -539,19 +537,21 @@ void SciTEWin::ReadProperties() {
 	}
 }
 
-static FilePath GetSciTEPath(const FilePath &home) {
+namespace {
+
+FilePath GetSciTEPath(const FilePath &home) {
 	if (home.IsSet()) {
-		return FilePath(home);
+		return home;
 	} else {
-		GUI::gui_char path[MAX_PATH];
-		if (::GetModuleFileNameW(0, path, static_cast<DWORD>(std::size(path))) == 0)
-			return FilePath();
+		GUI::gui_char path[MAX_PATH+1]{};
+		if (::GetModuleFileNameW(0, path, MAX_PATH) == 0)
+			return {};
 		// Remove the SciTE.exe
-		GUI::gui_char *lastSlash = wcsrchr(path, pathSepChar);
-		if (lastSlash)
-			*lastSlash = '\0';
-		return FilePath(path);
+		const FilePath pathSciTE(path);
+		return pathSciTE.Directory();
 	}
+}
+
 }
 
 FilePath SciTEWin::GetDefaultDirectory() {
@@ -823,8 +823,16 @@ void CommandWorker::Initialise(bool resetToStart) noexcept {
 	outputScroll = 1;
 }
 
-void CommandWorker::Execute() {
-	pSciTE->ProcessExecute();
+void CommandWorker::Execute() noexcept {
+	try {
+		pSciTE->ProcessExecute();
+	} catch (...) {
+		try {
+			pSciTE->OutputAppendEncodedStringSynchronised(L"Exception in thread.\r\n", 0);
+		} catch (...) {
+			// Ignore exception here which could be memory exhaustion from encoding
+		}
+	}
 }
 
 void SciTEWin::ResetExecution() {
@@ -973,14 +981,16 @@ DWORD SciTEWin::ExecuteOne(const Job &jobToRun) {
 	PROCESS_INFORMATION pi = {};
 
 	// Make a mutable copy as the CreateProcess parameter is mutable
-	const GUI::gui_string sCommand = GUI::StringFromUTF8(jobToRun.command);
-	std::vector<wchar_t> vwcCommand(sCommand.c_str(), sCommand.c_str() + sCommand.length() + 1);
+	GUI::gui_string sCommand = GUI::StringFromUTF8(jobToRun.command);
+
+	const DWORD creationFlags = CREATE_NEW_PROCESS_GROUP |
+		((jobToRun.flags & jobLowPriority) ? BELOW_NORMAL_PRIORITY_CLASS : 0);
 
 	BOOL running = ::CreateProcessW(
 			       nullptr,
-			       &vwcCommand[0],
+			       sCommand.data(),
 			       nullptr, nullptr,
-			       TRUE, CREATE_NEW_PROCESS_GROUP,
+			       TRUE, creationFlags,
 			       nullptr,
 			       startDirectory.IsSet() ?
 			       startDirectory.AsInternal() : nullptr,
@@ -994,14 +1004,13 @@ DWORD SciTEWin::ExecuteOne(const Job &jobToRun) {
 		std::string runComLine = "cmd.exe /c ";
 		runComLine = runComLine.append(jobToRun.command);
 
-		const GUI::gui_string sRunComLine = GUI::StringFromUTF8(runComLine);
-		std::vector<wchar_t> vwcRunComLine(sRunComLine.c_str(), sRunComLine.c_str() + sRunComLine.length() + 1);
+		GUI::gui_string sRunComLine = GUI::StringFromUTF8(runComLine);
 
 		running = ::CreateProcessW(
 				  nullptr,
-				  &vwcRunComLine[0],
+				  sRunComLine.data(),
 				  nullptr, nullptr,
-				  TRUE, CREATE_NEW_PROCESS_GROUP,
+				  TRUE, creationFlags,
 				  nullptr,
 				  startDirectory.IsSet() ?
 				  startDirectory.AsInternal() : nullptr,
@@ -1052,8 +1061,8 @@ DWORD SciTEWin::ExecuteOne(const Job &jobToRun) {
 			DWORD bytesAvail = 0;
 			std::vector<char> buffer(pipeBufferSize);
 
-			if (!::PeekNamedPipe(hPipeRead, &buffer[0],
-					     static_cast<DWORD>(buffer.size()), &bytesRead, &bytesAvail, nullptr)) {
+			if (!::PeekNamedPipe(hPipeRead, buffer.data(), pipeBufferSize,
+				&bytesRead, &bytesAvail, nullptr)) {
 				bytesAvail = 0;
 			}
 
@@ -1099,13 +1108,13 @@ DWORD SciTEWin::ExecuteOne(const Job &jobToRun) {
 				}
 
 			} else if (bytesAvail > 0) {
-				const int bTest = ::ReadFile(hPipeRead, &buffer[0],
-							     static_cast<DWORD>(buffer.size()), &bytesRead, nullptr);
+				const int bTest = ::ReadFile(hPipeRead, buffer.data(), pipeBufferSize,
+							     &bytesRead, nullptr);
 
 				if (bTest && bytesRead) {
 
 					if (jobToRun.flags & jobRepSelMask) {
-						repSelBuf.append(&buffer[0], bytesRead);
+						repSelBuf.append(buffer.data(), bytesRead);
 					}
 
 					if (!(jobToRun.flags & jobQuiet)) {
@@ -1154,7 +1163,9 @@ DWORD SciTEWin::ExecuteOne(const Job &jobToRun) {
 		stExitMessage << ">Exit code: " << exitcode;
 		if (jobQueue.TimeCommands()) {
 			stExitMessage << "    Time: ";
-			stExitMessage << std::setprecision(4) << cmdWorker.commandTime.Duration();
+			stExitMessage << std::fixed;
+			stExitMessage << std::setprecision(4);
+			stExitMessage << cmdWorker.commandTime.Duration();
 		}
 		stExitMessage << "\n";
 		OutputAppendStringSynchronised(stExitMessage.str());
@@ -1236,8 +1247,8 @@ void SciTEWin::ShellExec(std::string_view cmd, std::string_view dir) {
 	if (!s)
 		s = strstr(mycmdLowered, ".com");
 	std::string cmdcopy(cmd);
-	char *mycmdcopy = &cmdcopy[0];
-	char *mycmd;
+	char *mycmdcopy = cmdcopy.data();
+	const char *mycmd;
 	char *mycmdEnd = nullptr;
 	if (s && ((*(s + 4) == '\0') || (*(s + 4) == ' '))) {
 		ptrdiff_t len_mycmd = s - mycmdLowered + 4;
@@ -1325,14 +1336,10 @@ void SciTEWin::Execute() {
 
 	if (job.jobType == JobSubsystem::extension) {
 		// Execute extensions synchronously
-		if (job.flags & jobGroupUndo)
-			wEditor.BeginUndoAction();
-
-		if (extender)
+		if (extender) {
+			UndoBlock ub(wEditor, job.flags & jobGroupUndo);
 			extender->OnExecute(job.command.c_str());
-
-		if (job.flags & jobGroupUndo)
-			wEditor.EndUndoAction();
+		}
 
 		ExecuteNext();
 	} else {
@@ -1779,7 +1786,7 @@ bool SciTEWin::PreOpenCheck(const GUI::gui_string &file) {
 	- the pipe cannot be peeked, which appears to be from command lines such as "scite <file.txt"
 	otherwise it is unblocked
 */
-bool SciTEWin::IsStdinBlocked() {
+bool SciTEWin::IsStdinBlocked() noexcept {
 	DWORD unreadMessages = 0;
 	INPUT_RECORD irec[1] = {};
 	char bytebuffer = '\0';
@@ -1983,7 +1990,8 @@ LRESULT SciTEWin::ContextMenuMessage(UINT iMessage, WPARAM wParam, LPARAM lParam
 		}
 	}
 	menuSource = ::GetDlgCtrlID(HwndOf(*w));
-	ContextMenu(*w, pt, wSciTE);
+	const GUI::Point ptClient = ClientFromScreen(HwndOf(*w), pt);
+	ContextMenu(*w, pt, ptClient, wSciTE);
 	return 0;
 }
 
